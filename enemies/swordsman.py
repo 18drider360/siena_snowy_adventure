@@ -90,42 +90,61 @@ class Swordsman(pygame.sprite.Sprite):
         self.frame_counter = 0.0
         self.animation_speed = 0.12
         
-        # Movement
-        self.speed = 1.8  # Increased from 1.2 for more aggressive pursuit
-        self.direction = -1  # Start moving left
+        # Movement - Add randomness to prevent bunching
+        self.base_speed = 1.8
+        self.speed = self.base_speed + random.uniform(-0.3, 0.3)  # Vary speed by ±0.3
+        self.direction = random.choice([-1, 1])  # Random starting direction
         self.patrol_left = patrol_left
         self.patrol_right = patrol_right
         
         # State
         self.state = "walk"
-        self.facing_right = False
+        self.facing_right = self.direction == 1
         
-        # Idle behavior
+        # Idle behavior - Random idle frequency
         self.idle_timer = 0
         self.idle_duration = 0
         self.is_idling = False
+        self.idle_frequency = random.randint(150, 300)  # How often to randomly idle
         
-        # --- TRACKING BEHAVIOR ---
-        self.tracking_mode = False  # Whether actively tracking player
-        self.tracking_range = 400  # Distance at which swordsman notices player
-        self.attack_range = 80  # Distance at which swordsman attacks
-        self.lose_interest_range = 600  # Distance at which swordsman gives up chase
+        # --- TRACKING BEHAVIOR - Add randomness ---
+        self.tracking_mode = False
+        self.tracking_range = random.randint(350, 450)  # Vary detection range
+        self.attack_range = random.randint(70, 90)  # Vary attack range slightly
+        self.lose_interest_range = random.randint(550, 650)  # Vary persistence
         
-        # Attack mechanics (melee only - no projectiles)
-        self.attack_cooldown = 0
-        self.attack_cooldown_max = random.randint(60, 120)  # Reduced from 100-180 for more frequent attacks
+        # Personality traits for variety
+        self.aggression = random.uniform(0.85, 1.15)  # Some are more aggressive
+        self.patience = random.uniform(0.8, 1.2)  # Some wait longer before attacking
+        
+        # Attack mechanics - Randomized timing
+        self.attack_cooldown = random.randint(20, 80)  # Start with varied cooldown
+        self.attack_cooldown_min = int(60 * self.patience)  # Patient ones attack less often
+        self.attack_cooldown_max = int(120 * self.patience)
         self.is_attacking = False
-        self.attack_windup_pause_frame = 2  # Pause at frame 2 (windup)
+        self.attack_windup_pause_frame = 2
         self.attack_pause_timer = 0
-        self.attack_pause_duration = 20  # Short pause
+        self.attack_pause_duration = random.randint(15, 25)  # Vary windup time
         
         # Health
-        self.health = 3
-        self.max_health = 3  # More health since melee fighter
+        self.health = 1  # Reduced from 2
+        self.max_health = 1
         self.is_dead = False
         self.hurt_flash_timer = 0
         self.invincible = False
         self.invincible_timer = 0
+
+        # Knockback
+        self.knockback_velocity = 0
+        self.knockback_decay = 0.85
+
+        # Load attack sound
+        try:
+            self.attack_sound = pygame.mixer.Sound("assets/sounds/enemy_projectile.ogg")
+            self.attack_sound.set_volume(0.3)
+        except Exception as e:
+            # Silently fail if mixer not initialized
+            self.attack_sound = None
         
     def load_sprite_sheet(self, path, frame_count, target_height=130):
         """Load and split a sprite sheet into frames"""
@@ -198,7 +217,14 @@ class Swordsman(pygame.sprite.Sprite):
             self.invincible_timer -= 1
             if self.invincible_timer == 0:
                 self.invincible = False
-        
+
+        # Apply knockback
+        if self.knockback_velocity != 0:
+            self.rect.x += self.knockback_velocity
+            self.knockback_velocity *= self.knockback_decay
+            if abs(self.knockback_velocity) < 0.5:
+                self.knockback_velocity = 0
+
         # --- ATTACKING STATE ---
         if self.is_attacking:
             self.animate_attack()
@@ -235,6 +261,9 @@ class Swordsman(pygame.sprite.Sprite):
                 
                 # If tracking, move toward player
                 if self.tracking_mode:
+                    # Apply aggression multiplier to speed
+                    chase_speed = self.base_speed * self.aggression
+                    
                     # Determine direction to player
                     if dx > 0:  # Player is to the right
                         self.direction = 1
@@ -243,14 +272,26 @@ class Swordsman(pygame.sprite.Sprite):
                         self.direction = -1
                         self.facing_right = False
                     
+                    # Use personality-adjusted speed when chasing
+                    self.speed = chase_speed
+                    
                     # Attack if player is within attack range
                     if distance < self.attack_range and self.attack_cooldown <= 0:
-                        self.start_attack()
-                        self.attack_cooldown = random.randint(60, 120)
+                        self.start_attack(player)
+                        # Use personality-based cooldown
+                        self.attack_cooldown = random.randint(
+                            self.attack_cooldown_min,
+                            self.attack_cooldown_max
+                        )
+                else:
+                    # Reset to base speed when not tracking
+                    self.speed = self.base_speed + random.uniform(-0.3, 0.3)
         
         # --- WALKING STATE ---
         # Move in current direction (either patrol or tracking)
-        self.rect.x += self.speed * self.direction
+        # Add slight random variance to prevent perfect synchronization
+        speed_variance = random.uniform(-0.1, 0.1) if random.randint(0, 30) == 0 else 0
+        self.rect.x += (self.speed + speed_variance) * self.direction
         
         # Check patrol bounds only if NOT tracking
         if not self.tracking_mode:
@@ -266,7 +307,7 @@ class Swordsman(pygame.sprite.Sprite):
                 self.rect.centerx = old_centerx - (self.sprite_offset * 2)
             
             # --- RANDOM IDLE TRIGGER (only when not tracking) ---
-            if random.randint(0, 200) == 0:
+            if random.randint(0, self.idle_frequency) == 0:
                 self.start_idle()
         
         # --- ATTACK COOLDOWN ---
@@ -275,7 +316,7 @@ class Swordsman(pygame.sprite.Sprite):
         # Random attacks only when not tracking
         if not self.tracking_mode and self.attack_cooldown <= 0:
             if random.randint(0, 100) == 0:  # Less frequent random attacks
-                self.start_attack()
+                self.start_attack(player)
                 self.attack_cooldown = random.randint(100, 180)
         
         # Update hitbox to follow rect
@@ -293,7 +334,7 @@ class Swordsman(pygame.sprite.Sprite):
         self.frame_counter = 0.0
         self.state = "idle"
     
-    def start_attack(self):
+    def start_attack(self, player=None):
         """Start the attack animation sequence"""
         self.is_attacking = True
         self.attack_pause_timer = 0
@@ -301,6 +342,8 @@ class Swordsman(pygame.sprite.Sprite):
         self.frame_counter = 0.0
         self.state = "attack"
         self.sword_hitbox_active = False
+        self.has_played_attack_sound = False  # Flag to play sound once per attack
+        self.attack_sound_player = player  # Store player reference for sound distance check
     
     def animate_idle(self):
         """Animate idle standing"""
@@ -366,6 +409,14 @@ class Swordsman(pygame.sprite.Sprite):
             # Based on description: frames 4, 5, 6 (1-indexed)
             if self.current_frame in [3, 4, 5]:
                 self.sword_hitbox_active = True
+
+                # Play attack sound on frame 3 (when sword swings) if not already played
+                if self.current_frame == 3 and not self.has_played_attack_sound:
+                    if self.attack_sound and self.attack_sound_player:
+                        distance = abs(self.attack_sound_player.hitbox.centerx - self.hitbox.centerx)
+                        if distance < 600:
+                            self.attack_sound.play()
+                    self.has_played_attack_sound = True
             else:
                 self.sword_hitbox_active = False
             
@@ -429,10 +480,10 @@ class Swordsman(pygame.sprite.Sprite):
     def take_damage(self, damage=1):
         """Handle taking damage"""
         if self.is_dead or self.invincible:
-            return
-        
+            return False
+
         self.health -= damage
-        
+
         if self.health <= 0:
             self.die()
         else:
@@ -441,6 +492,8 @@ class Swordsman(pygame.sprite.Sprite):
             # Make invincible for 60 frames (1 second)
             self.invincible = True
             self.invincible_timer = 60
+
+        return True
     
     def die(self):
         """Trigger death sequence"""
@@ -452,20 +505,27 @@ class Swordsman(pygame.sprite.Sprite):
     
     def animate_death(self):
         """Play death animation and remove sprite"""
+        # Safety check first: if animation is done, kill sprite
+        if self.current_frame >= len(self.death_frames):
+            self.death_complete = True
+            self.kill()
+            return
+
         self.frame_counter += 0.20
-        
+
         if self.frame_counter >= 1.0:
             self.frame_counter = 0.0
             self.current_frame += 1
-            
-            # Remove sprite after death animation completes
+
+            # Check again after incrementing
             if self.current_frame >= len(self.death_frames):
+                self.death_complete = True
                 self.kill()
                 return
-        
+
         old_bottom = self.rect.bottom
         old_centerx = self.rect.centerx
-        
+
         base_image = self.death_frames[self.current_frame]
         if self.facing_right:
             self.image = pygame.transform.flip(base_image, True, False)

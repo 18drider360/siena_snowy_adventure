@@ -384,19 +384,25 @@ class Elkman(pygame.sprite.Sprite):
     
     def animate_death(self):
         """Play death animation and remove sprite"""
+        # Safety check first: if animation is done, kill sprite
+        if self.current_frame >= len(self.death_frames):
+            self.kill()
+            return
+
         self.frame_counter += 0.18
-        
+
         if self.frame_counter >= 1.0:
             self.frame_counter = 0.0
             self.current_frame += 1
-            
+
+            # Check again after incrementing
             if self.current_frame >= len(self.death_frames):
                 self.kill()
                 return
-        
+
         old_bottom = self.rect.bottom
         old_centerx = self.rect.centerx
-        
+
         base_image = self.death_frames[self.current_frame]
         self.image = pygame.transform.flip(base_image, True, False) if self.facing_right else base_image
         

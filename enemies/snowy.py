@@ -1,5 +1,6 @@
 import pygame
 import random
+import constants as C
 
 class Snowy(pygame.sprite.Sprite):
     """Snowman enemy - slow, powerful melee fighter that tracks and punches the player"""
@@ -91,8 +92,8 @@ class Snowy(pygame.sprite.Sprite):
         self.animation_speed = 0.08  # Slow, lumbering movement
         
         # Movement - slow but powerful
-        self.speed = 0.6  # Very slow movement (glacier-like)
-        self.chase_speed = 1.0  # Slightly faster when chasing
+        self.speed = C.SNOWY_SPEED  # Very slow movement (glacier-like)
+        self.chase_speed = C.SNOWY_CHASE_SPEED  # Slightly faster when chasing
         self.direction = -1  # Start moving left
         self.patrol_left = patrol_left
         self.patrol_right = patrol_right
@@ -108,8 +109,8 @@ class Snowy(pygame.sprite.Sprite):
         
         # --- TRACKING BEHAVIOR ---
         self.tracking_mode = False  # Whether actively tracking player
-        self.tracking_range = 500  # Large range - Snowy notices player from far away
-        self.attack_range = 90  # Needs to get close to punch
+        self.tracking_range = C.SNOWY_TRACKING_RANGE  # Large range - Snowy notices player from far away
+        self.attack_range = C.SNOWY_ATTACK_RANGE  # Needs to get close to punch
         self.lose_interest_range = 800  # Very persistent - doesn't give up easily
         self.chase_determination = 0  # How determined Snowy is to reach player
         
@@ -122,9 +123,10 @@ class Snowy(pygame.sprite.Sprite):
         self.attack_pause_duration = 35  # Longer windup for powerful punch
         
         # Health - tanky snowman
-        self.max_health = 4  # Track maximum health
-        self.health = 4  # More health than most enemies
+        self.max_health = 2  # Track maximum health
+        self.health = C.SNOWY_HEALTH  # More health than most enemies
         self.is_dead = False
+        self.death_complete = False
         self.hurt_flash_timer = 0
         self.invincible = False
         self.invincible_timer = 0
@@ -459,28 +461,35 @@ class Snowy(pygame.sprite.Sprite):
     
     def animate_death(self):
         """Play death animation and remove sprite"""
+        # Safety check: if we've already gone past the last frame, mark complete and exit
+        if self.current_frame >= len(self.death_frames):
+            self.death_complete = True
+            self.kill()
+            return
+
         self.frame_counter += 0.20  # Moderate death animation speed
-        
+
         if self.frame_counter >= 1.0:
             self.frame_counter = 0.0
             self.current_frame += 1
-            
+
             # Remove sprite after death animation completes
             if self.current_frame >= len(self.death_frames):
+                self.death_complete = True
                 self.kill()
                 return
-        
+
         old_bottom = self.rect.bottom
         old_centerx = self.rect.centerx
-        
+
         base_image = self.death_frames[self.current_frame]
         if self.facing_right:
             self.image = pygame.transform.flip(base_image, True, False)
         else:
             self.image = base_image
-        
+
         self.rect = self.image.get_rect()
         self.rect.centerx = old_centerx
         self.rect.bottom = old_bottom
-        
+
         self.update_hitbox_position()

@@ -1,0 +1,116 @@
+# =============================================================================
+# SIENA'S SNOWY ADVENTURE - GAME CONFIGURATION
+# =============================================================================
+# This file contains all game balance settings and can be edited to
+# tweak gameplay without modifying code!
+
+# === DISPLAY SETTINGS ===
+display:
+  window_width: 1000
+  window_height: 600
+  display_scale: 1.4  # Multiplier for window size (1.0 = 1000x600, 2.0 = 2000x1200)
+  fps: 60
+  title: "Siena's Snowy Adventure"
+
+# === AUDIO SETTINGS ===
+audio:
+  master_enabled: true  # Master switch for all audio
+  music_enabled: true
+  sound_enabled: true
+  music_volume: 0.6
+  sound_volume: 1.0
+
+# === PLAYER SETTINGS ===
+player:
+  # Movement
+  speed: 4
+  gravity: 0.6
+  jump_strength: -13
+  double_jump_multiplier: 0.9
+  variable_jump_dampening: 0.4
+
+  # Hitbox sizes [width, height]
+  hitbox_normal: [40, 45]
+  hitbox_crouch: [55, 25]
+  hitbox_roll: [35, 35]
+
+  # Health
+  max_health: 6  # 3 hearts (2 health per heart)
+  invincible_duration: 35  # frames
+  hurt_duration: 30  # frames
+
+  # Knockback
+  knockback_strength: 20
+  knockback_y_boost: -5
+
+  # Roll ability
+  roll:
+    speed_initial: 7
+    speed_max: 12
+    acceleration: 0.15
+    stamina_max: 120
+    stamina_recharge_rate: 0.4
+    stamina_recharge_delay: 30  # frames
+    cooldown: 0  # frames
+
+  # Spin attack
+  spin:
+    speed: 10
+    charges_max: 3
+    charge_cooldown: 180  # frames (3 seconds at 60 FPS)
+    duration_frames: 7
+    animation_fps: 20
+
+# === ENEMY SETTINGS ===
+enemies:
+  # Global enemy settings
+  global:
+    gravity: 0.6
+    invincible_duration: 60  # frames
+    hurt_flash_duration: 20  # frames
+
+  # Snowy (Snowman)
+  snowy:
+    health: 2
+    speed: 0.6
+    chase_speed: 1.0
+    tracking_range: 500
+    attack_range: 90
+    lose_interest_range: 800
+    punch_damage: 2
+    attack_cooldown_min: 80
+    attack_cooldown_max: 140
+    attack_pause_duration: 35
+
+# === COLLISION SETTINGS ===
+collision:
+  platform_tolerance: 5  # pixels
+  stomp_detection_tolerance: 15  # pixels above enemy head
+  stomp_bounce_velocity: -10
+
+# === LEVEL SETTINGS ===
+level:
+  default_height: 600
+  default_ground_y: 570
+  default_ground_height: 30
+  camera_offset_x: 300  # Player offset from left edge
+
+# === DEATH & RESPAWN SETTINGS ===
+death:
+  animation_delay: 90  # frames (1.5 seconds at 60 FPS)
+  fade_speed: 5
+  pit_y_threshold: 550  # Y position for pit death
+
+# === PROJECTILE SETTINGS ===
+projectiles:
+  sound_range: 400  # Distance within which projectile sounds are heard
+
+# === DEBUG SETTINGS ===
+debug:
+  show_hitboxes: false
+  unlock_all_levels: true
+  invincibility: false
+  show_enemies: true
+  show_platforms: true
+  show_hazards: true
+  show_ground: false  # Ground is invisible but has collision

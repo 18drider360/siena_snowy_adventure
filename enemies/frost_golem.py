@@ -22,7 +22,7 @@ class Fireball(pygame.sprite.Sprite):
         self.bounce_count = 0
         self.max_bounces = 3
         self.bounce_dampening = 0.7  # Reduces bounce height each time
-        self.ground_y = 570  # Ground level
+        self.ground_y = 440  # Ground level (400 + 40 for ground thickness)
         
     def update(self):
         """Move the fireball with bouncing physics"""
@@ -46,8 +46,8 @@ class Fireball(pygame.sprite.Sprite):
             # Bounce back up with reduced velocity
             self.speed_y = -abs(self.speed_y) * self.bounce_dampening
         
-        # Remove if off screen
-        if self.rect.x < -100 or self.rect.x > 3000:
+        # Remove if off screen (level width is 7500)
+        if self.rect.x < -100 or self.rect.x > 8000:
             self.kill()
 
 
@@ -59,7 +59,7 @@ class FrostGolem(pygame.sprite.Sprite):
         # --- POWER EFFECTIVENESS CONFIGURATION ---
         # Define which player powers work against this enemy
         self.vulnerable_to = {
-            'stomp': False,      # Can be damaged by landing on head
+            'stomp': True,      # Can be damaged by landing on head
             'spin_attack': False, # Can be damaged by spin attack
             'roll': True      # Roll does NOT damage (player takes damage instead)
         }
@@ -134,37 +134,42 @@ class FrostGolem(pygame.sprite.Sprite):
         # Animation
         self.current_frame = 0
         self.frame_counter = 0.0
-        self.animation_speed = 0.15  # Faster animation
+        self.animation_speed = random.uniform(0.13, 0.17)  # Vary animation speed
         
-        # Movement - Enhanced for agility
-        self.base_speed = 2.2  # Faster base speed
+        # Movement - Add randomness to prevent bunching
+        self.base_speed = random.uniform(2.0, 2.4)  # Vary base speed
         self.speed = self.base_speed
-        self.direction = -1  # Start moving left
+        self.direction = random.choice([-1, 1])  # Random starting direction
         self.patrol_left = patrol_left
         self.patrol_right = patrol_right
         
         # State
         self.state = "walk"
-        self.facing_right = False
+        self.facing_right = self.direction == 1
         
-        # Idle behavior (rarely idles - stays aggressive)
+        # Idle behavior - Add some personality
         self.idle_timer = 0
         self.idle_duration = 0
         self.is_idling = False
+        self.idle_frequency = random.randint(250, 400)  # How often to idle
         
-        # --- INTELLIGENT BEHAVIOR ---
+        # --- INTELLIGENT BEHAVIOR - Add personality variation ---
         self.tracking_mode = False
-        self.detection_range = 400  # Detects player from medium distance
-        self.optimal_range_min = 140  # Preferred minimum distance
-        self.optimal_range_max = 220  # Preferred maximum distance
-        self.danger_zone = 100  # If player closer, panic and retreat
-        self.lose_interest_range = 600
+        self.detection_range = random.randint(550, 650)  # Vary detection
+        self.optimal_range_min = random.randint(130, 160)  # Vary preferred distance
+        self.optimal_range_max = random.randint(300, 350)  # Some like longer range
+        self.danger_zone = random.randint(90, 120)  # Vary panic threshold
+        self.lose_interest_range = random.randint(750, 850)  # Vary persistence
+        
+        # Personality traits
+        self.cowardice = random.uniform(0.8, 1.3)  # How easily spooked
+        self.aggression = random.uniform(0.7, 1.1)  # How likely to chase vs. shoot
         
         # Hit-and-run tactics
-        self.aggro_mode = False  # When true, rushes at player
-        self.retreat_mode = False  # When true, runs away from player
-        self.strafe_mode = False  # When true, moves laterally
-        self.strafe_direction = 1
+        self.aggro_mode = False
+        self.retreat_mode = False
+        self.strafe_mode = False
+        self.strafe_direction = random.choice([-1, 1])  # Random strafe direction
         self.tactic_timer = 0
         self.tactic_duration = 0
         
@@ -173,28 +178,42 @@ class FrostGolem(pygame.sprite.Sprite):
         self.is_dodging = False
         self.dodge_direction = 1
         
-        # Attack/Shoot mechanics
-        self.attack_cooldown = 0
-        self.attack_cooldown_max = random.randint(60, 100)  # Fast attacks
+        # Attack/Shoot mechanics - Randomized
+        self.attack_cooldown = random.randint(10, 50)  # Start with varied cooldown
+        self.attack_cooldown_min = random.randint(35, 50)
+        self.attack_cooldown_max = random.randint(70, 90)
         self.is_attacking = False
-        self.attack_frame_trigger = 3  # Shoot on frame 3
-        self.attack_windup_pause_frame = 1  # Pause at frame 1
+        self.attack_frame_trigger = 3
+        self.attack_windup_pause_frame = 1
         self.attack_pause_timer = 0
-        self.attack_pause_duration = 25  # Quick attack
+        self.attack_pause_duration = random.randint(15, 25)  # Vary windup
         self.has_shot_fireball = False
         
         # Quick-fire mode (shoots multiple times rapidly)
         self.burst_fire_mode = False
         self.burst_shots_remaining = 0
         self.burst_shot_cooldown = 0
+        self.burst_fire_chance = random.randint(2, 5)  # Some do bursts more often
         
         # Health
-        self.health = 2
-        self.max_health = 2
+        self.health = 1
+        self.max_health = 1
         self.is_dead = False
         self.hurt_flash_timer = 0
         self.invincible = False
         self.invincible_timer = 0
+
+        # Knockback
+        self.knockback_velocity = 0
+        self.knockback_decay = 0.85
+
+        # Load attack sound
+        try:
+            self.attack_sound = pygame.mixer.Sound("assets/sounds/enemy_projectile.ogg")
+            self.attack_sound.set_volume(0.3)
+        except Exception as e:
+            # Silently fail if mixer not initialized
+            self.attack_sound = None
         
     def load_sprite_sheet(self, path, frame_count, target_height=80):
         """Load and split a sprite sheet into frames"""
@@ -243,26 +262,27 @@ class FrostGolem(pygame.sprite.Sprite):
     
     def decide_tactic(self, distance, dx):
         """Decide which combat tactic to use based on distance"""
-        # If in danger zone, always retreat
-        if distance < self.danger_zone:
+        # If in danger zone, retreat (influenced by cowardice)
+        danger_threshold = self.danger_zone * self.cowardice
+        if distance < danger_threshold:
             self.aggro_mode = False
             self.retreat_mode = True
             self.strafe_mode = False
             self.tactic_timer = random.randint(40, 70)
             return
         
-        # If too far, chase player
-        if distance > self.optimal_range_max + 50:
+        # If too far, chase player (influenced by aggression)
+        if distance > self.optimal_range_max + (50 * self.aggression):
             self.aggro_mode = True
             self.retreat_mode = False
             self.strafe_mode = False
             self.tactic_timer = random.randint(50, 90)
             return
         
-        # In optimal range - randomly choose between strafe and shoot
+        # In optimal range - weighted choice based on personality
         if distance >= self.optimal_range_min and distance <= self.optimal_range_max:
-            choice = random.randint(0, 2)
-            if choice == 0:
+            # Aggressive Golems prefer chasing, cowardly ones prefer strafing
+            if random.random() < 0.3 * (1.0 / self.aggression):
                 # Strafe
                 self.strafe_mode = True
                 self.aggro_mode = False
@@ -276,8 +296,8 @@ class FrostGolem(pygame.sprite.Sprite):
                 self.retreat_mode = False
                 self.tactic_timer = random.randint(20, 40)
                 
-                # Occasionally do burst fire
-                if random.randint(0, 3) == 0:
+                # Burst fire based on personality
+                if random.randint(0, self.burst_fire_chance) == 0:
                     self.burst_fire_mode = True
                     self.burst_shots_remaining = 2
     
@@ -296,7 +316,14 @@ class FrostGolem(pygame.sprite.Sprite):
             self.invincible_timer -= 1
             if self.invincible_timer == 0:
                 self.invincible = False
-        
+
+        # Apply knockback
+        if self.knockback_velocity != 0:
+            self.rect.x += self.knockback_velocity
+            self.knockback_velocity *= self.knockback_decay
+            if abs(self.knockback_velocity) < 0.5:
+                self.knockback_velocity = 0
+
         # Count down dodge timer
         if self.dodge_timer > 0:
             self.dodge_timer -= 1
@@ -305,7 +332,7 @@ class FrostGolem(pygame.sprite.Sprite):
         
         # --- ATTACKING STATE ---
         if self.is_attacking:
-            self.animate_attack(projectile_group)
+            self.animate_attack(projectile_group, player)
             self.update_hitbox_position()
             return
         
@@ -393,7 +420,11 @@ class FrostGolem(pygame.sprite.Sprite):
                     if self.optimal_range_min <= distance <= self.optimal_range_max + 30:
                         if self.attack_cooldown <= 0 and not self.retreat_mode:
                             self.start_attack()
-                            self.attack_cooldown = random.randint(50, 90)
+                            # Use personality-based cooldown
+                            self.attack_cooldown = random.randint(
+                                self.attack_cooldown_min,
+                                self.attack_cooldown_max
+                            )
                     
                     # Random dodge when player is close (evasive maneuver)
                     if distance < 180 and not self.is_dodging and random.randint(0, 60) == 0:
@@ -408,7 +439,9 @@ class FrostGolem(pygame.sprite.Sprite):
         
         # --- WALKING STATE ---
         if self.direction != 0:
-            self.rect.x += self.speed * self.direction
+            # Add slight random variance to prevent synchronization
+            speed_variance = random.uniform(-0.15, 0.15) if random.randint(0, 25) == 0 else 0
+            self.rect.x += (self.speed + speed_variance) * self.direction
         
         # Check patrol bounds only if NOT tracking
         if not self.tracking_mode:
@@ -425,14 +458,17 @@ class FrostGolem(pygame.sprite.Sprite):
                 self.facing_right = False
                 self.rect.centerx = old_centerx - (self.sprite_offset * 2)
             
-            # Rarely idle when patrolling
-            if random.randint(0, 300) == 0:
+            # Rarely idle when patrolling (use personality)
+            if random.randint(0, self.idle_frequency) == 0:
                 self.start_idle()
             
-            # Occasional random attacks when patrolling
+            # Occasional random attacks when patrolling (use personality)
             if self.attack_cooldown <= 0 and random.randint(0, 150) == 0:
                 self.start_attack()
-                self.attack_cooldown = random.randint(120, 240)
+                self.attack_cooldown = random.randint(
+                    self.attack_cooldown_min, 
+                    self.attack_cooldown_max
+                )
         
         # --- ATTACK COOLDOWN ---
         self.attack_cooldown -= 1
@@ -497,7 +533,7 @@ class FrostGolem(pygame.sprite.Sprite):
         
         self.update_hitbox_position()
     
-    def animate_attack(self, projectile_group):
+    def animate_attack(self, projectile_group, player=None):
         """Handle attack animation and fireball shooting"""
         # Check if we're at the pause frame (windup)
         if self.current_frame == self.attack_windup_pause_frame and self.attack_pause_timer < self.attack_pause_duration:
@@ -531,7 +567,7 @@ class FrostGolem(pygame.sprite.Sprite):
             
             # Shoot fireball at frame 3 (when mouth opens)
             if self.current_frame == self.attack_frame_trigger and not self.has_shot_fireball:
-                self.shoot_fireball(projectile_group)
+                self.shoot_fireball(projectile_group, player)
                 self.has_shot_fireball = True
             
             # End of attack animation
@@ -562,15 +598,21 @@ class FrostGolem(pygame.sprite.Sprite):
         
         self.update_hitbox_position()
     
-    def shoot_fireball(self, projectile_group):
+    def shoot_fireball(self, projectile_group, player=None):
         """Create and launch a fireball from the mouth"""
         offset = 30 if self.facing_right else -30
         fireball_x = self.rect.centerx + offset
         fireball_y = self.rect.centery + 5
-        
+
         direction = 1 if self.facing_right else -1
         fireball = Fireball(fireball_x, fireball_y, direction)
         projectile_group.add(fireball)
+
+        # Play attack sound only if player is nearby (within 600 pixels)
+        if self.attack_sound and player:
+            distance = abs(player.hitbox.centerx - self.hitbox.centerx)
+            if distance < 600:
+                self.attack_sound.play()
     
     def animate_walk(self):
         """Animate walking"""
@@ -603,10 +645,10 @@ class FrostGolem(pygame.sprite.Sprite):
     def take_damage(self, damage=1):
         """Handle taking damage"""
         if self.is_dead or self.invincible:
-            return
-        
+            return False
+
         self.health -= damage
-        
+
         if self.health <= 0:
             self.die()
         else:
@@ -615,13 +657,12 @@ class FrostGolem(pygame.sprite.Sprite):
             # Make invincible for 60 frames (1 second)
             self.invincible = True
             self.invincible_timer = 60
-            
+
             # PANIC RESPONSE - immediately retreat when hit
             self.retreat_mode = True
-            self.aggro_mode = False
-            self.strafe_mode = False
-            self.tactic_timer = random.randint(50, 80)
-    
+
+        return True
+
     def die(self):
         """Trigger death sequence"""
         self.is_dead = True
@@ -631,20 +672,27 @@ class FrostGolem(pygame.sprite.Sprite):
     
     def animate_death(self):
         """Play death animation and remove sprite"""
+        # Safety check first: if animation is done, kill sprite
+        if self.current_frame >= len(self.death_frames):
+            self.death_complete = True
+            self.kill()
+            return
+
         self.frame_counter += 0.25
-        
+
         if self.frame_counter >= 1.0:
             self.frame_counter = 0.0
             self.current_frame += 1
-            
-            # Remove sprite after death animation completes
+
+            # Check again after incrementing
             if self.current_frame >= len(self.death_frames):
+                self.death_complete = True
                 self.kill()
                 return
-        
+
         old_bottom = self.rect.bottom
         old_centerx = self.rect.centerx
-        
+
         base_image = self.death_frames[self.current_frame]
         if self.facing_right:
             self.image = pygame.transform.flip(base_image, True, False)

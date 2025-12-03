@@ -1,8 +1,9 @@
 import pygame
 from utils import settings as S
+import constants as C
 
 class Siena(pygame.sprite.Sprite):
-    def __init__(self, x=100, y=500, abilities=None):
+    def __init__(self, x=100, y=500, abilities=None, max_health=6):
         super().__init__()
         
         # --- ABILITY SYSTEM ---
@@ -101,28 +102,28 @@ class Siena(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(midbottom=(x, y))
 
         # Create a tight hitbox that fits the penguin closely
-        self.hitbox = pygame.Rect(0, 0, 40, 45)
+        self.hitbox = pygame.Rect(0, 0, *C.PLAYER_HITBOX_NORMAL)
         self.hitbox.midbottom = self.rect.midbottom
 
         # Define hitbox sizes for different states
-        self.hitbox_normal = (40, 45)
-        self.hitbox_crouch = (55, 25)
-        self.hitbox_roll = (35, 35)
+        self.hitbox_normal = C.PLAYER_HITBOX_NORMAL
+        self.hitbox_crouch = C.PLAYER_HITBOX_CROUCH
+        self.hitbox_roll = C.PLAYER_HITBOX_ROLL
 
         self.current_frame = 0
         self.frame_counter = 0.0
         self.animation_speed = 0.15
 
         # Movement
-        self.speed = 4
-        self.gravity = 0.6
-        self.jump_strength = -13
+        self.speed = C.PLAYER_SPEED
+        self.gravity = C.PLAYER_GRAVITY
+        self.jump_strength = C.PLAYER_JUMP_STRENGTH
         self.vel_y = 0
 
         # State
         self.facing_right = True
         self.is_moving = False
-        self.on_ground = False
+        self.on_ground = True  # Start on ground to prevent initial fall
         self.is_rolling = False
         self.is_crouching = False
         self.is_flapping = False
@@ -133,47 +134,48 @@ class Siena(pygame.sprite.Sprite):
         self.roll_timer = 0.0
         self.roll_offset_y = -10
         self.roll_duration = len(self.roll_frames) / 10.0
+        self.roll_cooldown = 0  # Cooldown timer in frames (60 fps)
         
         # --- ROLL SPEED SETTINGS ---
-        self.roll_speed_initial = 7
+        self.roll_speed_initial = C.PLAYER_ROLL_SPEED_INITIAL
         self.roll_speed_max = 12
         self.roll_speed_current = self.roll_speed_initial
         self.roll_acceleration = 0.15
         
         # --- ROLL STAMINA SETTINGS ---
-        self.roll_stamina_max = 120
+        self.roll_stamina_max = C.PLAYER_ROLL_STAMINA_MAX
         self.roll_stamina = self.roll_stamina_max
         self.roll_stamina_recharge_rate = 0.4
-        self.roll_stamina_recharge_delay = 30
+        self.roll_stamina_recharge_delay = C.PLAYER_ROLL_STAMINA_RECHARGE_DELAY
         self.roll_stamina_delay_timer = 0
 
         # --- SPIN ATTACK STATE ---
         self.is_spinning = False
         self.spin_timer = 0.0
         self.spin_duration = len(self.spin_frames) / 20.0
-        self.spin_speed = 10
+        self.spin_speed = C.PLAYER_SPIN_SPEED
         self.has_used_spin = False
         
         # --- SPIN CHARGE SYSTEM ---
         self.spin_charges_max = 3
         self.spin_charges = 3
-        self.spin_charge_cooldown = 180
+        self.spin_charge_cooldown = C.PLAYER_SPIN_CHARGE_COOLDOWN
         self.spin_charge_timers = []
 
         # --- HEALTH SYSTEM ---
-        self.max_health = 6
-        self.health = 6
+        self.max_health = max_health
+        self.health = max_health
         self.is_hurt = False
         self.hurt_timer = 0
-        self.hurt_duration = 30
+        self.hurt_duration = C.PLAYER_HURT_DURATION
         self.invincible = False
         self.invincible_timer = 0
-        self.invincible_duration = 35
+        self.invincible_duration = C.PLAYER_INVINCIBLE_DURATION
         self.is_dead = False
 
         # --- KNOCKBACK ---
         self.knockback_velocity = 0
-        self.knockback_strength = 20
+        self.knockback_strength = C.PLAYER_KNOCKBACK_STRENGTH
         self.knockback_y_boost = -5
 
     # ------------------------------------------------------------------
@@ -270,30 +272,34 @@ class Siena(pygame.sprite.Sprite):
         self.vel_y = 0
 
     # ------------------------------------------------------------------
-    def spin_attack(self):
+    def spin_attack(self, sound=None):
         """Trigger spin attack if in the air and charges available"""
         # Check if spin ability is unlocked
         if not self.abilities.get('spin', False):
             return
-            
+
         if self.is_dead or self.is_hurt or self.on_ground or self.is_spinning:
             return
-        
+
         # Check if we have charges available
         if self.spin_charges <= 0:
             return
-        
+
         # Consume one charge
         self.spin_charges -= 1
-        
+
         # Add a new recharge timer to the queue
         self.spin_charge_timers.append(self.spin_charge_cooldown)
-        
+
         self.is_spinning = True
         self.spin_timer = 0.0
         self.current_frame = 0
         self.frame_counter = 0.0
         self.is_flapping = False
+
+        # Play spin attack sound
+        if sound:
+            sound.play()
 
     # ------------------------------------------------------------------
     def ground_pound(self):
@@ -379,65 +385,55 @@ class Siena(pygame.sprite.Sprite):
                 self.roll_timer = 0.0
                 self.roll_speed_current = self.roll_speed_initial
             
-            # Stop rolling if not on ground
-            if not self.on_ground and self.is_rolling:
-                self.is_rolling = False
-                self.roll_timer = 0.0
-                self.roll_speed_current = self.roll_speed_initial
-            elif self.is_rolling:
-                self.roll_timer += 1 / 60
-                
+            # Continue rolling even when airborne (removed on_ground check)
+            if self.is_rolling:
                 # Accelerate roll speed up to maximum
                 if self.roll_speed_current < self.roll_speed_max:
                     self.roll_speed_current += self.roll_acceleration
                     if self.roll_speed_current > self.roll_speed_max:
                         self.roll_speed_current = self.roll_speed_max
 
-                if self.roll_timer >= self.roll_duration:
-                    self.roll_timer = 0.0
-
-                    if (
-                        self.on_ground
-                        and (keys_pressed[pygame.K_DOWN] or keys_pressed[pygame.K_s])
-                        and (keys_pressed[pygame.K_LEFT] or keys_pressed[pygame.K_a]
-                            or keys_pressed[pygame.K_RIGHT] or keys_pressed[pygame.K_d])
-                        and self.roll_stamina > 0
-                        and self.abilities.get('roll', False)  # Check roll ability
-                    ):
-                        if keys_pressed[pygame.K_RIGHT] or keys_pressed[pygame.K_d]:
-                            self.facing_right = True
-                        elif keys_pressed[pygame.K_LEFT] or keys_pressed[pygame.K_a]:
-                            self.facing_right = False
-                        
+                # Check if player still wants to roll (holding down + direction)
+                still_holding_roll = (
+                    (keys_pressed[pygame.K_DOWN] or keys_pressed[pygame.K_s])
+                    and (keys_pressed[pygame.K_LEFT] or keys_pressed[pygame.K_a]
+                        or keys_pressed[pygame.K_RIGHT] or keys_pressed[pygame.K_d])
+                )
+                
+                # Stop rolling if keys released OR landed on ground without holding roll keys
+                if not still_holding_roll:
+                    self.is_rolling = False
+                    self.roll_speed_current = self.roll_speed_initial
+                    
+                    if self.on_ground and (keys_pressed[pygame.K_DOWN] or keys_pressed[pygame.K_s]) and self.abilities.get('crouch', False):
+                        self.is_crouching = True
                         self.current_frame = 0
                         self.frame_counter = 0.0
+                        self.update_hitbox_position()
+                        self.animate()
+                        return
                     else:
-                        self.is_rolling = False
-                        self.roll_speed_current = self.roll_speed_initial
-                        
-                        if (keys_pressed[pygame.K_DOWN] or keys_pressed[pygame.K_s]) and self.abilities.get('crouch', False):
-                            self.is_crouching = True
-                            self.current_frame = 0
-                            self.frame_counter = 0.0
-                            self.update_hitbox_position()
+                        # Exiting roll to normal - adjust Y position for height difference
+                        if self.on_ground:
+                            # Store the hitbox bottom position (actual ground contact)
+                            ground_position = self.hitbox.bottom
                             self.animate()
+                            # Calculate how much the sprite grew and adjust Y to compensate
+                            height_diff = 180 - 145  # normal height - roll height
+                            self.rect.y += height_diff
+                            self.update_hitbox_position()
                             return
-                        else:
-                            # Exiting roll to normal - adjust Y position for height difference
-                            if self.on_ground:
-                                # Store the hitbox bottom position (actual ground contact)
-                                ground_position = self.hitbox.bottom
-                                self.animate()
-                                # Calculate how much the sprite grew and adjust Y to compensate
-                                height_diff = 180 - 145  # normal height - roll height
-                                self.rect.y += height_diff
-                                self.update_hitbox_position()
-                                return
 
                 if self.is_rolling:
+                    # Apply horizontal movement
                     self.rect.x += self.roll_speed_current * (1 if self.facing_right else -1)
-                    self.animate()
                     
+                    # Apply gravity while rolling (so player falls off platforms)
+                    if not self.on_ground:
+                        self.vel_y += self.gravity
+                        self.rect.y += self.vel_y
+                    
+                    self.animate()
                     self.update_hitbox_position()
                     return
 
@@ -463,6 +459,10 @@ class Siena(pygame.sprite.Sprite):
 
         self.jump_held = jump_keys_pressed
 
+        # Count down roll cooldown
+        if self.roll_cooldown > 0:
+            self.roll_cooldown -= 1
+
         # --- ROLL START ---
         if (
             self.on_ground
@@ -470,13 +470,14 @@ class Siena(pygame.sprite.Sprite):
             and (keys_pressed[pygame.K_LEFT] or keys_pressed[pygame.K_a]
                 or keys_pressed[pygame.K_RIGHT] or keys_pressed[pygame.K_d])
             and self.roll_stamina > 0
+            and self.roll_cooldown == 0  # Check roll cooldown
             and self.abilities.get('roll', False)  # Check roll ability
         ):
             if keys_pressed[pygame.K_RIGHT] or keys_pressed[pygame.K_d]:
                 self.facing_right = True
             elif keys_pressed[pygame.K_LEFT] or keys_pressed[pygame.K_a]:
                 self.facing_right = False
-            
+
             self.is_rolling = True
             self.roll_speed_current = self.roll_speed_initial
             self.current_frame = 0

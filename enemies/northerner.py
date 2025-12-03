@@ -168,9 +168,10 @@ class Northerner(pygame.sprite.Sprite):
         self.player_velocity_x = 0
         
         # Health
-        self.health = 3  # Tougher than Frost Golem
-        self.max_health = 3
+        self.health = 1  # Tougher than Frost Golem
+        self.max_health = 1
         self.is_dead = False
+        self.death_complete = False
         self.hurt_flash_timer = 0
         self.invincible = False
         self.invincible_timer = 0
@@ -568,28 +569,35 @@ class Northerner(pygame.sprite.Sprite):
     
     def animate_death(self):
         """Play death animation and remove sprite"""
+        # Safety check: if we've already gone past the last frame, mark complete and exit
+        if self.current_frame >= len(self.death_frames):
+            self.death_complete = True
+            self.kill()
+            return
+
         self.frame_counter += 0.20
-        
+
         if self.frame_counter >= 1.0:
             self.frame_counter = 0.0
             self.current_frame += 1
-            
+
             # Remove sprite after death animation completes
             if self.current_frame >= len(self.death_frames):
+                self.death_complete = True
                 self.kill()
                 return
-        
+
         old_bottom = self.rect.bottom
         old_centerx = self.rect.centerx
-        
+
         base_image = self.death_frames[self.current_frame]
         if self.facing_right:
             self.image = pygame.transform.flip(base_image, True, False)
         else:
             self.image = base_image
-        
+
         self.rect = self.image.get_rect()
         self.rect.centerx = old_centerx
         self.rect.bottom = old_bottom
-        
+
         self.update_hitbox_position()

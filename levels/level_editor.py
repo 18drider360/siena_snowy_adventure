@@ -173,7 +173,7 @@ def build_level():
     platform52 = pygame.Rect(17800, 450, 200, 30)
     
     # Victory platform
-    platform53 = pygame.Rect(18200, 380, 400, 40)
+    platform53 = pygame.Rect(18200, 380, 400,  30)
     
     # Bonus high platforms
     bonus1 = pygame.Rect(18400, 250, 150, 25)

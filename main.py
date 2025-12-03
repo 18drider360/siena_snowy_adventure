@@ -1,435 +1,106 @@
-def draw_level_complete_screen(screen, level_num, coins, time):
-    """Draw the level completion cutscene as a dialogue with the penguin NPC"""
-    # Load font
-    try:
-        font_large = pygame.font.Font("assets/fonts/PressStart2P-Regular.ttf", 24)
-        font_small = pygame.font.Font("assets/fonts/PressStart2P-Regular.ttf", 16)
-    except:
-        font_large = pygame.font.Font(None, 48)
-        font_small = pygame.font.Font(None, 32)
-    
-    # Calculate time in seconds
-    time_seconds = time // 60
-    
-    # Draw dialogue box (like old RPG games)
-    dialogue_box = pygame.Rect(100, 350, S.WINDOW_WIDTH - 200, 200)
-    
-    # Draw box shadow
-    shadow_box = dialogue_box.copy()
-    shadow_box.x += 4
-    shadow_box.y += 4
-    pygame.draw.rect(screen, (0, 0, 0), shadow_box)
-    
-    # Draw main box with border
-    pygame.draw.rect(screen, (255, 255, 255), dialogue_box)
-    pygame.draw.rect(screen, (0, 0, 0), dialogue_box, 4)
-    
-    # Inner padding
-    text_area = dialogue_box.inflate(-40, -40)
-    
-    # NPC Name tag (top-left corner of box)
-    name_tag = pygame.Rect(dialogue_box.x + 20, dialogue_box.y - 15, 150, 30)
-    pygame.draw.rect(screen, (255, 215, 0), name_tag)  # Gold
-    pygame.draw.rect(screen, (0, 0, 0), name_tag, 3)
-    
-    name_text = font_small.render("PEDRO", True, (0, 0, 0))
-    name_rect = name_text.get_rect(center=(name_tag.centerx, name_tag.centery))
-    screen.blit(name_text, name_rect)
-    
-    # Dialogue text lines
-    y_offset = text_area.y + 10
-    line_spacing = 35
-    
-    # Line 1: Congratulations
-    line1 = font_large.render("Congratulations, Siena!", True, (0, 0, 0))
-    screen.blit(line1, (text_area.x, y_offset))
-    y_offset += line_spacing + 10
-    
-    # Line 2: Level complete
-    line2 = font_small.render(f"You completed Level {level_num}!", True, (0, 0, 0))
-    screen.blit(line2, (text_area.x, y_offset))
-    y_offset += line_spacing
-    
-    # Line 3: Stats intro
-    line3 = font_small.render("Here are your results:", True, (0, 0, 0))
-    screen.blit(line3, (text_area.x, y_offset))
-    y_offset += line_spacing
-    
-    # Line 4: Coins collected
-    line4 = font_small.render(f"  Coins: {coins}", True, (0, 100, 0))
-    screen.blit(line4, (text_area.x, y_offset))
-    y_offset += line_spacing
-    
-    # Line 5: Time
-    line5 = font_small.render(f"  Time: {time_seconds} seconds", True, (0, 100, 0))
-    screen.blit(line5, (text_area.x, y_offset))
-    
-    # Press Enter prompt (bottom-right)
-    prompt_text = font_small.render("Press ENTER >", True, (100, 100, 100))
-    prompt_rect = prompt_text.get_rect(bottomright=(dialogue_box.right - 20, dialogue_box.bottom - 15))
-    screen.blit(prompt_text, prompt_rect)
-
-
 # main.py
 import sys
 import pygame
 from utils import settings as S
 from utils.progression import GameProgression, LevelManager
+from utils.save_system import SaveSystem
 from utils.background import ParallaxBackground
 from ui.health_display import HealthDisplay
 from ui.enemy_health_display import EnemyHealthDisplay
 from ui.spin_charge_display import SpinChargeDisplay
 from ui.roll_stamina_display import RollStaminaDisplay
+from menus import PauseMenu, DeathMenu
+from audio_manager import AudioManager
+from game_screens import show_title_screen, show_level_transition
+from rendering import (
+    draw_level_complete_screen,
+    draw_spiky_hazard, draw_brick_platform, draw_icy_brick_platform,
+    draw_northern_lights_ground, draw_snowy_ground, draw_wooden_platform,
+    draw_death_screen, draw_game_hud
+)
+import collision_physics as collision
+import constants as C
 
-def draw_spiky_hazard(screen, rect, camera_x):
-    """Draw a dangerous spiky ice hazard"""
-    draw_x = rect.x - camera_x
-    draw_y = rect.y
-    
-    # Base danger color - dark icy blue with red tint
-    base_color = (140, 180, 220)  # Icy blue base
-    danger_tint = (200, 100, 120)  # Reddish danger overlay
-    
-    # Draw the base ice block
-    draw_rect = pygame.Rect(draw_x, draw_y, rect.width, rect.height)
-    pygame.draw.rect(screen, base_color, draw_rect)
-    
-    # Add danger gradient overlay (darker at bottom)
-    for i in range(rect.height):
-        alpha = int(50 * (i / rect.height))  # Gradient from 0 to 50
-        gradient_color = (
-            base_color[0] - alpha,
-            base_color[1] - alpha,
-            base_color[2] - alpha
-        )
-        pygame.draw.line(screen, gradient_color, 
-                        (draw_x, draw_y + i), 
-                        (draw_x + rect.width, draw_y + i))
-    
-    # Draw spikes across the top edge
-    spike_width = 16  # Width of each spike base
-    spike_height = 20  # How tall spikes are
-    num_spikes = (rect.width // spike_width) + 1
-    
-    for i in range(num_spikes):
-        spike_x = draw_x + (i * spike_width)
-        
-        # Skip if off-screen
-        if spike_x > draw_x + rect.width - spike_width:
-            continue
-        
-        # Spike triangle points (pointing UP from platform)
-        tip_x = spike_x + spike_width // 2
-        tip_y = draw_y - spike_height
-        left_x = spike_x
-        left_y = draw_y
-        right_x = spike_x + spike_width
-        right_y = draw_y
-        
-        spike_points = [(tip_x, tip_y), (left_x, left_y), (right_x, right_y)]
-        
-        # Main spike color (icy white with slight blue)
-        spike_color = (230, 240, 250)
-        pygame.draw.polygon(screen, spike_color, spike_points)
-        
-        # Spike outline (darker for definition)
-        pygame.draw.polygon(screen, (100, 120, 150), spike_points, 2)
-        
-        # Add highlight on left side of spike
-        highlight_points = [(tip_x, tip_y), (left_x, left_y), (tip_x, tip_y + spike_height // 2)]
-        pygame.draw.polygon(screen, (255, 255, 255), highlight_points, 1)
-        
-        # Add red danger glow at tip (warning!)
-        danger_tip = pygame.Surface((12, 12), pygame.SRCALPHA)
-        pygame.draw.circle(danger_tip, (255, 100, 100, 120), (6, 6), 6)
-        screen.blit(danger_tip, (tip_x - 6, tip_y - 3))
-    
-    # Draw danger outline around entire hazard
-    pygame.draw.rect(screen, (255, 50, 50), draw_rect, 3)  # Red warning border
-    
-    # Add pulsing danger effect (optional - you can remove if too much)
-    import time
-    pulse = int(abs(((time.time() * 3) % 2) - 1) * 30)  # Pulsing value 0-30
-    danger_outline_color = (255, 100 + pulse, 100 + pulse)
-    pygame.draw.rect(screen, danger_outline_color, draw_rect, 2)
+# GLOBAL AUDIO CONTROL - Set to True to completely disable ALL audio
+# This is controlled by settings.MASTER_AUDIO_ENABLED
+DISABLE_ALL_AUDIO = not S.MASTER_AUDIO_ENABLED
 
 
-def draw_brick_platform(screen, rect, camera_x):
-    """Draw a snowy/icy brick platform with individual blocks"""
-    # Brick dimensions
-    brick_width = 32
-    brick_height = 16
-    
-    # Offset for camera
-    draw_x = rect.x - camera_x
-    draw_y = rect.y
-    
-    # Calculate how many bricks fit
-    cols = (rect.width // brick_width) + 1
-    rows = (rect.height // brick_height) + 1
-    
-    for row in range(rows):
-        for col in range(cols):
-            # Offset every other row for brick pattern
-            x_offset = (brick_width // 2) if row % 2 == 1 else 0
-            
-            brick_x = draw_x + (col * brick_width) + x_offset
-            brick_y = draw_y + (row * brick_height)
-            
-            # Only draw if brick is within platform bounds and on screen
-            if brick_x + brick_width < draw_x or brick_x > draw_x + rect.width:
-                continue
-            if brick_y + brick_height < draw_y or brick_y > draw_y + rect.height:
-                continue
-            
-            # Clip brick to platform boundaries
-            brick_rect = pygame.Rect(brick_x, brick_y, brick_width, brick_height)
-            clip_rect = brick_rect.clip(pygame.Rect(draw_x, draw_y, rect.width, rect.height))
-            
-            if clip_rect.width <= 0 or clip_rect.height <= 0:
-                continue
-            
-            # Draw snowy/icy brick with shading for 3D effect
-            # Main brick color (light blue-white ice)
-            brick_color = (200, 220, 240)  # Icy blue-white
-            pygame.draw.rect(screen, brick_color, clip_rect)
-            
-            # Top highlight (bright white snow/ice)
-            highlight_color = (240, 250, 255)  # Almost pure white
-            if clip_rect.height > 2:
-                pygame.draw.rect(screen, highlight_color, (clip_rect.x, clip_rect.y, clip_rect.width, 2))
-            
-            # Left highlight
-            if clip_rect.width > 2:
-                pygame.draw.rect(screen, highlight_color, (clip_rect.x, clip_rect.y, 2, clip_rect.height))
-            
-            # Bottom shadow (darker blue-grey)
-            shadow_color = (120, 140, 170)  # Cool shadow
-            if clip_rect.height > 2:
-                pygame.draw.rect(screen, shadow_color, (clip_rect.x, clip_rect.bottom - 2, clip_rect.width, 2))
-            
-            # Right shadow
-            if clip_rect.width > 2:
-                pygame.draw.rect(screen, shadow_color, (clip_rect.right - 2, clip_rect.y, 2, clip_rect.height))
-            
-            # Brick outline (medium blue-grey for icy definition)
-            pygame.draw.rect(screen, (100, 120, 150), clip_rect, 1)
+def main(progression):
+    # Initialize pygame if not already done
+    if not pygame.get_init():
+        pygame.init()
 
-
-def draw_death_screen(screen):
-    """Draw the death screen overlay"""
-    # Create semi-transparent black overlay
-    overlay = pygame.Surface((S.WINDOW_WIDTH, S.WINDOW_HEIGHT))
-    overlay.fill((0, 0, 0))
-    overlay.set_alpha(200)  # Semi-transparent
-    screen.blit(overlay, (0, 0))
-    
-    # Load Fixedsys font
-    try:
-        font_large = pygame.font.Font("assets/fonts/Fixedsys500c.ttf", 48)
-        font_small = pygame.font.Font("assets/fonts/Fixedsys500c.ttf", 28)
-    except:
-        font_large = pygame.font.Font(None, 72)
-        font_small = pygame.font.Font(None, 48)
-    
-    text1 = font_large.render("Oh no! You died.", True, (255, 255, 255))
-    text2 = font_small.render("Press Enter to restart.", True, (200, 200, 200))
-    
-    text1_rect = text1.get_rect(center=(S.WINDOW_WIDTH // 2, S.WINDOW_HEIGHT // 2 - 40))
-    text2_rect = text2.get_rect(center=(S.WINDOW_WIDTH // 2, S.WINDOW_HEIGHT // 2 + 40))
-    
-    screen.blit(text1, text1_rect)
-    screen.blit(text2, text2_rect)
-
-def draw_game_hud(screen, coins_collected, level_time, world_name):
-    """Draw the top HUD with coins, world, and time like Super Mario"""
-    # Load Fixedsys font
-    try:
-        font = pygame.font.Font("assets/fonts/Fixedsys500c.ttf", 24)
-    except:
+    # Disable audio mixer if DISABLE_ALL_AUDIO is True
+    if DISABLE_ALL_AUDIO:
         try:
-            font = pygame.font.SysFont('arial', 36, bold=True)
+            pygame.mixer.quit()
         except:
-            font = pygame.font.Font(None, 36)
-    
-    # Calculate time in seconds
-    time_seconds = level_time // 60
-    
-    # Create HUD text
-    coins_text = font.render(f"COINS", True, (0, 0, 0))
-    coins_value = font.render(f"{coins_collected}", True, (0, 0, 0))
-    
-    world_text = font.render(f"WORLD", True, (0, 0, 0))
-    world_value = font.render(f"{world_name}", True, (0, 0, 0))
-    
-    time_text = font.render(f"TIME", True, (0, 0, 0))
-    time_value = font.render(f"{time_seconds}", True, (0, 0, 0))
-    
-    # Position HUD elements very close to center
-    screen_width = S.WINDOW_WIDTH
-    
-    # Left-center section - COINS
-    coins_label_x = screen_width // 2 - 100
-    screen.blit(coins_text, (coins_label_x, 10))
-    # Center the value under the label
-    coins_value_x = coins_label_x + (coins_text.get_width() - coins_value.get_width()) // 2
-    screen.blit(coins_value, (coins_value_x, 40))
-    
-    # Center section - WORLD
-    world_label_x = screen_width // 2 + 100
-    screen.blit(world_text, (world_label_x, 10))
-    # Center the value under the label
-    world_value_x = world_label_x + (world_text.get_width() - world_value.get_width()) // 2
-    screen.blit(world_value, (world_value_x, 40))
-    
-    # Right-center section - TIME
-    time_label_x = screen_width // 2 + 300
-    screen.blit(time_text, (time_label_x, 10))
-    # Center the value under the label
-    time_value_x = time_label_x + (time_text.get_width() - time_value.get_width()) // 2
-    screen.blit(time_value, (time_value_x, 40))
+            pass
 
-def main():
-    pygame.init()
-    screen = pygame.display.set_mode((S.WINDOW_WIDTH, S.WINDOW_HEIGHT))
+    # Create scaled display window
+    display_width = int(S.WINDOW_WIDTH * S.DISPLAY_SCALE)
+    display_height = int(S.WINDOW_HEIGHT * S.DISPLAY_SCALE)
+    display_screen = pygame.display.set_mode((display_width, display_height))
     pygame.display.set_caption(S.TITLE)
+
+    # Create internal render surface (800x600) - this is what we draw to
+    screen = pygame.Surface((S.WINDOW_WIDTH, S.WINDOW_HEIGHT))
+
     clock = pygame.time.Clock()
 
-    # --- GLOBAL SETTINGS ---
-    SHOW_HITBOXES = False  # Disable all hitbox debugging
-    
-    # --- AUDIO TOGGLES ---
-    ENABLE_MUSIC = False  # Set to False to disable background music
-    ENABLE_SOUND = False  # Set to False to disable sound effects
-    
-    # --- DEBUG TOGGLES ---
-    SHOW_ENEMIES = True
-    SHOW_PLATFORMS = True
-    SHOW_HAZARDS = True
-    SHOW_GROUND = False  # Ground is invisible (still has collision)
+    # --- LOAD GAME CONFIGURATION ---
+    from config_loader import get_config
+    config = get_config()
 
-    # --- PROGRESSION SYSTEM ---
-    progression = GameProgression()
-    
-    # --- MUSIC SETUP ---
-    if ENABLE_MUSIC:
-        try:
-            pygame.mixer.music.load("assets/music/main_theme.ogg")
-            pygame.mixer.music.set_volume(0.6)  # 60% volume (adjust as needed)
-            pygame.mixer.music.play(-1)  # -1 means loop forever
-        except Exception as e:
-            print(f"Could not load music: {e}")
-    
-    # --- SOUND EFFECTS ---
-    if ENABLE_SOUND:
-        try:
-            # Try new location first, fall back to old location
-            try:
-                death_sound = pygame.mixer.Sound("assets/sounds/death.wav")
-            except:
-                death_sound = pygame.mixer.Sound("assets/music/death.wav")
-            death_sound.set_volume(0.6)
-        except Exception as e:
-            print(f"Could not load death sound: {e}")
-            death_sound = None
-        
-        try:
-            # Try new location first, fall back to old location
-            try:
-                stage_clear_sound = pygame.mixer.Sound("assets/sounds/stage_clear.wav")
-            except:
-                stage_clear_sound = pygame.mixer.Sound("assets/music/stage_clear.wav")
-            stage_clear_sound.set_volume(0.7)
-        except Exception as e:
-            print(f"Could not load stage clear sound: {e}")
-            stage_clear_sound = None
-        
-        try:
-            jump_sound = pygame.mixer.Sound("assets/sounds/jump.ogg")
-            jump_sound.set_volume(0.4)
-        except Exception as e:
-            print(f"Could not load jump sound: {e}")
-            jump_sound = None
-        
-        try:
-            double_jump_sound = pygame.mixer.Sound("assets/sounds/double_jump.ogg")
-            double_jump_sound.set_volume(0.4)
-        except Exception as e:
-            print(f"Could not load double jump sound: {e}")
-            double_jump_sound = None
-        
-        try:
-            coin_sound = pygame.mixer.Sound("assets/sounds/coin.ogg")
-            coin_sound.set_volume(0.2)
-        except Exception as e:
-            print(f"Could not load coin sound: {e}")
-            coin_sound = None
-        
-        try:
-            bump_sound = pygame.mixer.Sound("assets/sounds/bump.ogg")
-            bump_sound.set_volume(0.2)
-        except Exception as e:
-            print(f"Could not load bump sound: {e}")
-            bump_sound = None
-        
-        try:
-            land_enemy_sound = pygame.mixer.Sound("assets/sounds/land_enemy.ogg")
-            land_enemy_sound.set_volume(0.3)
-        except Exception as e:
-            print(f"Could not load land enemy sound: {e}")
-            land_enemy_sound = None
-        
-        try:
-            land_slime_sound = pygame.mixer.Sound("assets/sounds/land_slime.ogg")
-            land_slime_sound.set_volume(0.3)
-        except Exception as e:
-            print(f"Could not load land slime sound: {e}")
-            land_slime_sound = None
-        
-        try:
-            enemy_projectile_sound = pygame.mixer.Sound("assets/sounds/enemy_projectile.ogg")
-            enemy_projectile_sound.set_volume(0.2)
-        except Exception as e:
-            print(f"Could not load enemy projectile sound: {e}")
-            enemy_projectile_sound = None
-    else:
-        death_sound = None
-        stage_clear_sound = None
-        jump_sound = None
-        double_jump_sound = None
-        coin_sound = None
-        bump_sound = None
-        land_enemy_sound = None
-        land_slime_sound = None
-        enemy_projectile_sound = None
+    # --- GLOBAL SETTINGS ---
+    SHOW_HITBOXES = config.get('debug.show_hitboxes', False)
+
+    # --- AUDIO TOGGLES ---
+    # These are controlled by settings.MASTER_AUDIO_ENABLED
+    ENABLE_MUSIC = S.MASTER_AUDIO_ENABLED  # Background music (main menu, in-game)
+    ENABLE_SOUND = S.MASTER_AUDIO_ENABLED  # Sound effects (character sounds, jumps, attacks, coins, etc.)
+
+    # --- DEBUG TOGGLES (loaded from config.yaml) ---
+    DEBUG_UNLOCK_ALL_LEVELS = config.get('debug.unlock_all_levels', True)
+    DEBUG_INVINCIBILITY = config.get('debug.invincibility', False)
+    SHOW_ENEMIES = config.get('debug.show_enemies', True)
+    SHOW_PLATFORMS = config.get('debug.show_platforms', True)
+    SHOW_HAZARDS = config.get('debug.show_hazards', True)
+    SHOW_GROUND = config.get('debug.show_ground', False)
+
+    # --- AUDIO MANAGER ---
+    audio_manager = AudioManager(enable_music=ENABLE_MUSIC, enable_sound=ENABLE_SOUND)
+    audio_manager.play_music(loop=True)
     
     # Game state
     game_over = False
     level_complete = False
     cutscene_active = False
+    paused = False  # NEW: Pause state
     death_fade_alpha = 0
     death_fade_speed = 5
     death_animation_timer = 0
     death_animation_delay = 90  # 3 seconds at 60 FPS (adjust as needed)
     show_death_screen = False
     
+    # --- MENU SYSTEMS ---
+    pause_menu = PauseMenu()
+    death_menu = DeathMenu()
+    
     # --- GAME STATS ---
     coins_collected = 0
     level_time = 0  # Time in frames (divide by 60 for seconds)
 
     # --- BUILD LEVEL USING LEVEL MANAGER ---
-    bg_color, platforms, hazards, level_width, player, enemies, projectiles, coins, world_name, goal_npc = \
+    bg_color, platforms, hazards, level_width, player, enemies, projectiles, coins, world_name, goal_npc, background_layers, moving_platforms, disappearing_platforms, appearing_platforms = \
         LevelManager.load_level(progression.current_level, progression)
 
-    # --- LOAD PARALLAX BACKGROUND ---
-    image_paths = [
-        "assets/images/backgrounds/mountains/5.png",
-        "assets/images/backgrounds/mountains/4.png",
-        "assets/images/backgrounds/mountains/3.png",
-        "assets/images/backgrounds/mountains/2.png",
-        "assets/images/backgrounds/mountains/1.png",
-    ]
-    background = ParallaxBackground(image_paths, level_width)
+    # Save the original static platforms (we'll rebuild the full list each frame with dynamic platforms)
+    static_platforms = platforms.copy()
+
+    # --- LOAD PARALLAX BACKGROUND (now level-specific) ---
+    background = ParallaxBackground(background_layers, level_width)
 
     # --- HEALTH UI SETUP ---
     health_ui = HealthDisplay()
@@ -449,28 +120,97 @@ def main():
                 running = False
             
             if event.type == pygame.KEYDOWN:
-                # Jump (only if not dead)
-                if not game_over:
+                # --- PAUSE TOGGLE (check this FIRST) ---
+                if event.key == pygame.K_ESCAPE:
+                    if not game_over and not cutscene_active:
+                        paused = not paused  # Toggle pause
+                        if paused:
+                            pause_menu.selected_index = 0  # Reset selection
+                            audio_manager.pause_music()  # Pause music
+                        else:
+                            audio_manager.unpause_music()  # Resume music
+                    elif paused:
+                        paused = False  # ESC also unpauses
+                        audio_manager.unpause_music()  # Resume music
+                    continue  # Don't process other keys when pressing ESC
+                
+                # Handle pause menu input (only if paused)
+                if paused:
+                    result = pause_menu.handle_input(event)
+                    if result == "CONTINUE":
+                        paused = False
+                        audio_manager.unpause_music()  # Resume music
+                    elif result == "RESTART":
+                        audio_manager.stop_music()  # Stop music before restart
+                        return "RESTART"  # Signal to restart
+                    elif result == "MAIN MENU":
+                        audio_manager.stop_music()  # Stop music before returning to menu
+                        return "MAIN_MENU"  # Return to title screen
+                    continue  # Skip other inputs while paused
+                
+                # Handle death menu input (only if showing death screen)
+                if show_death_screen:
+                    result = death_menu.handle_input(event)
+                    if result == "RESTART":
+                        audio_manager.stop_music()  # Stop music before restart
+                        return "RESTART"  # Signal to restart
+                    elif result == "MAIN MENU":
+                        audio_manager.stop_music()  # Stop music before returning to menu
+                        return "MAIN_MENU"  # Return to title screen
+                    continue  # Skip other inputs on death screen
+                
+                # Jump (only if not dead, not paused, and not on death screen)
+                if not game_over and not paused and not show_death_screen:
                     if event.key in (pygame.K_SPACE, pygame.K_UP, pygame.K_w):
-                        player.jump(jump_sound if ENABLE_SOUND else None, 
-                                   double_jump_sound if ENABLE_SOUND else None)
+                        player.jump(audio_manager.get_sound('jump'),
+                                   audio_manager.get_sound('double_jump'))
 
-                if not game_over:
+                if not game_over and not paused and not show_death_screen:
                     if event.key == pygame.K_e:
                         # E key only triggers spin attack now
-                        player.spin_attack()
+                        player.spin_attack(audio_manager.get_sound('spin_attack'))
                 
-                # Restart on Enter when death screen is showing
-                if show_death_screen and event.key == pygame.K_RETURN:
-                    # Restart the game by calling main() recursively
-                    main()
-                    return
-                
-                # Restart anytime with Shift+Enter
+                # Restart anytime with Shift+Enter (kept for convenience)
                 keys = pygame.key.get_pressed()
                 if event.key == pygame.K_RETURN and (keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]):
-                    main()
-                    return
+                    return "RESTART"
+
+            # --- MOUSE EVENT HANDLING ---
+            elif event.type == pygame.MOUSEMOTION or event.type == pygame.MOUSEBUTTONDOWN:
+                # Handle pause menu mouse input (only if paused)
+                if paused:
+                    result = pause_menu.handle_input(event)
+                    if result == "CONTINUE":
+                        paused = False
+                        audio_manager.unpause_music()  # Resume music
+                    elif result == "RESTART":
+                        audio_manager.stop_music()  # Stop music before restart
+                        return "RESTART"  # Signal to restart
+                    elif result == "MAIN MENU":
+                        audio_manager.stop_music()  # Stop music before returning to menu
+                        return "MAIN_MENU"  # Return to title screen
+
+                # Handle death menu mouse input (only if showing death screen)
+                elif show_death_screen:
+                    result = death_menu.handle_input(event)
+                    if result == "RESTART":
+                        audio_manager.stop_music()  # Stop music before restart
+                        return "RESTART"  # Signal to restart
+                    elif result == "MAIN MENU":
+                        audio_manager.stop_music()  # Stop music before returning to menu
+                        return "MAIN_MENU"  # Return to title screen
+
+                # Handle cutscene click to continue
+                elif cutscene_active and event.type == pygame.MOUSEBUTTONDOWN:
+                    # Check if there's a next level
+                    next_level = progression.current_level + 1
+                    if next_level in LevelManager.LEVELS:
+                        # There's a next level - advance to it
+                        progression.advance_to_next_level()
+                        return "NEXT_LEVEL"  # Signal to load next level
+                    else:
+                        # No more levels - return to title screen
+                        return "LEVEL_COMPLETE"  # Return to title screen
 
         # Check if player is dead
         if player.health <= 0 and not game_over:
@@ -478,10 +218,9 @@ def main():
             death_fade_alpha = 0
             death_animation_timer = 0
             show_death_screen = False
-            if ENABLE_MUSIC:
-                pygame.mixer.music.stop()  # Stop music on death
-            if ENABLE_SOUND and death_sound:
-                death_sound.play()  # Play death sound effect
+            if ENABLE_MUSIC and not DISABLE_ALL_AUDIO:
+                audio_manager.stop_music()  # Stop music on death
+            audio_manager.play_sound('death')  # Play death sound effect
 
         # Handle death animation delay
         if game_over and not show_death_screen:
@@ -489,8 +228,8 @@ def main():
             if death_animation_timer >= death_animation_delay:
                 show_death_screen = True
 
-        # --- UPDATE (only if not game over and not in cutscene) ---
-        if not game_over and not cutscene_active:
+        # --- UPDATE (only if not game over, not in cutscene, and not paused) ---
+        if not game_over and not cutscene_active and not paused:
             # Increment level timer
             level_time += 1
             
@@ -505,111 +244,66 @@ def main():
             
             # --- CHECK LEVEL GOAL NPC ---
             if goal_npc and not level_complete and player.hitbox.colliderect(goal_npc.trigger_zone):
-                level_complete = True
-                cutscene_active = True
-                if ENABLE_MUSIC:
-                    pygame.mixer.music.stop()  # Stop music on level complete
-                if ENABLE_SOUND and stage_clear_sound:
-                    stage_clear_sound.play()  # Play victory sound
-                # Complete the level in progression system
-                progression.complete_level(
-                    level_num=progression.current_level,
-                    coins_collected=coins_collected,
-                    time_taken=level_time,
-                    deaths=0  # Not tracking deaths
-                )
+                # Check if player has collected enough coins for their difficulty level
+                coins_required = progression.get_coin_requirement(progression.current_level)
+                if coins_collected >= coins_required:
+                    level_complete = True
+                    cutscene_active = True
+                    audio_manager.stop_music()  # Stop music on level complete
+                    audio_manager.play_sound('stage_clear')  # Play victory sound
+                    # Complete the level in progression system
+                    progression.complete_level(
+                        level_num=progression.current_level,
+                        coins_collected=coins_collected,
+                        time_taken=level_time,
+                        deaths=0  # Not tracking deaths
+                    )
+
+                    # Submit score to scoreboard
+                    SaveSystem.submit_score(
+                        username=current_username,
+                        level_num=progression.current_level,
+                        time_taken=level_time,
+                        coins_collected=coins_collected
+                    )
+
+                    # Save progress to disk
+                    if SaveSystem.save_progress(progression, current_username):
+                        print(f"💾 Progress saved! Level {progression.current_level} complete.")
+                # If not enough coins, nothing happens - player just stands there
             
             # --- CHECK HAZARDS FIRST (before platform collision adjusts position) ---
             if SHOW_HAZARDS:  # Only check hazards if they're enabled
                 for hazard in hazards:
                     if player.hitbox.colliderect(hazard):
-                        if not game_over:  # Only trigger once
+                        if not game_over and not DEBUG_INVINCIBILITY:  # Only trigger once (unless invincible)
                             player.health = 0
                             player.die()
                             game_over = True
                             death_fade_alpha = 0
                             death_animation_timer = 0
                             show_death_screen = False
-                            if ENABLE_MUSIC:
-                                pygame.mixer.music.stop()  # Stop music
-                            if ENABLE_SOUND and death_sound:
-                                death_sound.play()  # Play death sound
+                            audio_manager.stop_music()  # Stop music
+                            audio_manager.play_sound('death')  # Play death sound
                         break
-            
+
+            # --- CHECK FOR FALLING OFF THE MAP (pit death) ---
+            if player.rect.y > 550:  # Player has fallen below the screen (screen height = 600)
+                if not game_over and not DEBUG_INVINCIBILITY:
+                    player.health = 0
+                    player.die()
+                    game_over = True
+                    death_fade_alpha = 0
+                    death_animation_timer = 0
+                    show_death_screen = False
+                    audio_manager.stop_music()  # Stop music
+                    audio_manager.play_sound('death')  # Play death sound
+
             # --- PLATFORM COLLISION ---
             player.on_ground = False  # Reset each frame
-            
+
             if SHOW_PLATFORMS:  # Only collide with platforms if they're enabled
-                for platform in platforms:
-                    # Check if hitbox is touching or overlapping platform
-                    # Add a small tolerance (5 pixels) to catch cases where player is resting on platform
-                    tolerance = 5
-                    touching_from_top = (
-                        player.hitbox.right > platform.left and 
-                        player.hitbox.left < platform.right and
-                        player.hitbox.bottom >= platform.top - tolerance and
-                        player.hitbox.bottom <= platform.top + tolerance and
-                        player.vel_y >= 0
-                    )
-                    
-                    if touching_from_top:
-                        # Player is on top of platform - adjust RECT based on where hitbox should be
-                        
-                        # Calculate how much to adjust the rect
-                        # We want hitbox.bottom to be at platform.top
-                        hitbox_offset = player.rect.bottom - player.hitbox.bottom
-                        player.rect.bottom = platform.top + hitbox_offset
-                        
-                        player.vel_y = 0
-                        player.on_ground = True
-                        player.has_double_jump = False
-                        player.update_hitbox_position()
-                        
-                    elif player.hitbox.colliderect(platform):
-                        # Calculate overlap on each axis
-                        overlap_left = player.hitbox.right - platform.left
-                        overlap_right = platform.right - player.hitbox.left
-                        overlap_top = player.hitbox.bottom - platform.top
-                        overlap_bottom = platform.bottom - player.hitbox.top
-                        
-                        # Find the smallest overlap (this is the side we collided from)
-                        min_overlap = min(overlap_left, overlap_right, overlap_top, overlap_bottom)
-                        
-                        # Landing on platform from above
-                        if min_overlap == overlap_top and player.vel_y >= 0:
-                            
-                            # Adjust rect so that hitbox ends up at platform.top
-                            hitbox_offset = player.rect.bottom - player.hitbox.bottom
-                            player.rect.bottom = platform.top + hitbox_offset
-                            
-                            player.vel_y = 0
-                            player.on_ground = True
-                            player.has_double_jump = False
-                            player.update_hitbox_position()
-                        
-                        # Hitting platform from below
-                        elif min_overlap == overlap_bottom and player.vel_y < 0:
-                            
-                            # Adjust rect so hitbox top aligns with platform bottom
-                            hitbox_offset_top = player.hitbox.top - player.rect.top
-                            player.rect.top = platform.bottom - hitbox_offset_top
-                            
-                            player.vel_y = 0
-                            player.update_hitbox_position()
-                        
-                        # Side collisions
-                        elif min_overlap == overlap_left:
-                            
-                            hitbox_offset_x = player.hitbox.left - player.rect.left
-                            player.rect.left = platform.left - hitbox_offset_x - player.hitbox.width
-                            
-                            player.update_hitbox_position()
-                        elif min_overlap == overlap_right:
-                            
-                            hitbox_offset_x = player.hitbox.left - player.rect.left
-                            player.rect.left = platform.right - hitbox_offset_x
-                            
-                            player.update_hitbox_position()
+                player.on_ground = collision.check_platform_collision_player(player, platforms)
             
             # Update enemies (they add projectiles to the group)
             if SHOW_ENEMIES:  # Only update enemies if they're enabled
@@ -631,125 +325,178 @@ def main():
                         # Add gravity properties if they don't exist
                         enemy.vel_y = 0
                         enemy.gravity = 0.6
-                    
-                    # Reset on_ground state
-                    enemy_on_ground = False
-                    
+
+                    # Kill enemies that fall below the screen (fell in a pit)
+                    if enemy.rect.top > S.WINDOW_HEIGHT + 100:
+                        enemy.is_dead = True
+                        # Enemy death sounds are handled by the enemy objects themselves
+                        continue  # Skip rest of processing for this enemy
+
                     # Check collision with all platforms AND hazards (enemies can walk on hazards)
                     all_walkable = platforms + hazards if SHOW_HAZARDS else platforms
-                    for platform in all_walkable:
-                        # Check if enemy hitbox is near or touching platform
-                        tolerance = 5
-                        touching_from_top = (
-                            enemy.hitbox.right > platform.left and 
-                            enemy.hitbox.left < platform.right and
-                            enemy.hitbox.bottom >= platform.top - tolerance and
-                            enemy.hitbox.bottom <= platform.top + tolerance and
-                            enemy.vel_y >= 0
-                        )
-                        
-                        if touching_from_top:
-                            # Enemy is on platform
-                            hitbox_offset = enemy.rect.bottom - enemy.hitbox.bottom
-                            enemy.rect.bottom = platform.top + hitbox_offset
-                            enemy.vel_y = 0
-                            enemy_on_ground = True
-                            enemy.update_hitbox_position()
-                            
-                            # Check if enemy is at patrol edge - make them turn around
-                            if hasattr(enemy, 'patrol_left') and hasattr(enemy, 'patrol_right'):
-                                # Check if they're about to walk off the platform edge
-                                if enemy.direction == -1:  # Moving left
-                                    # If left edge of hitbox is past platform left edge, turn around
-                                    if enemy.hitbox.left <= platform.left + 10:
-                                        enemy.direction = 1
-                                        enemy.facing_right = True
-                                elif enemy.direction == 1:  # Moving right
-                                    # If right edge of hitbox is past platform right edge, turn around
-                                    if enemy.hitbox.right >= platform.right - 10:
-                                        enemy.direction = -1
-                                        enemy.facing_right = False
-                            
-                            break  # Found a platform, stop checking
-                        
-                        elif enemy.hitbox.colliderect(platform):
-                            # Handle other collision types if needed
-                            overlap_left = enemy.hitbox.right - platform.left
-                            overlap_right = platform.right - enemy.hitbox.left
-                            overlap_top = enemy.hitbox.bottom - platform.top
-                            overlap_bottom = platform.bottom - enemy.hitbox.top
-                            
-                            min_overlap = min(overlap_left, overlap_right, overlap_top, overlap_bottom)
-                            
-                            if min_overlap == overlap_top and enemy.vel_y >= 0:
-                                hitbox_offset = enemy.rect.bottom - enemy.hitbox.bottom
-                                enemy.rect.bottom = platform.top + hitbox_offset
-                                enemy.vel_y = 0
-                                enemy_on_ground = True
-                                enemy.update_hitbox_position()
-                            elif min_overlap == overlap_bottom and enemy.vel_y < 0:
-                                hitbox_offset_top = enemy.hitbox.top - enemy.rect.top
-                                enemy.rect.top = platform.bottom - hitbox_offset_top
-                                enemy.vel_y = 0
-                                enemy.update_hitbox_position()
+                    enemy_on_ground = collision.check_platform_collision_enemy(enemy, all_walkable)
+
+                    # Check if enemy is at patrol edge - make them turn around
+                    if enemy_on_ground and hasattr(enemy, 'patrol_left') and hasattr(enemy, 'patrol_right'):
+                        if hasattr(enemy, 'direction'):
+                            # Find which platform the enemy is on
+                            for platform in all_walkable:
+                                tolerance = 5
+                                if (enemy.hitbox.right > platform.left and
+                                    enemy.hitbox.left < platform.right and
+                                    enemy.hitbox.bottom >= platform.top - tolerance and
+                                    enemy.hitbox.bottom <= platform.top + tolerance):
+                                    # Enemy is on this platform - check edges
+                                    if enemy.direction == -1:  # Moving left
+                                        if enemy.hitbox.left <= platform.left + 10:
+                                            enemy.direction = 1
+                                            enemy.facing_right = True
+                                    elif enemy.direction == 1:  # Moving right
+                                        if enemy.hitbox.right >= platform.right - 10:
+                                            enemy.direction = -1
+                                            enemy.facing_right = False
+                                    break
             
             # Update projectiles (snowballs, iceballs, fireballs, spikes)
             projectiles.update()
             
-            # Check for newly spawned projectiles that need sound
-            if ENABLE_SOUND and enemy_projectile_sound:
+            # Check for newly spawned projectiles that need sound (only if player is nearby)
+            if ENABLE_SOUND and audio_manager.get_sound('enemy_projectile'):
+                PROJECTILE_SOUND_RANGE = 400  # Only hear projectiles within this distance
                 for projectile in projectiles:
                     if hasattr(projectile, 'spawn_sound') and projectile.spawn_sound:
-                        enemy_projectile_sound.play()
-                        projectile.spawn_sound = False  # Only play once
+                        # Calculate distance from player to projectile
+                        distance = abs(player.hitbox.centerx - projectile.rect.centerx)
+                        
+                        if distance <= PROJECTILE_SOUND_RANGE:
+                            # Player is close enough to hear it
+                            # Optional: adjust volume based on distance
+                            volume_multiplier = 1.0 - (distance / PROJECTILE_SOUND_RANGE) * 0.6
+                            audio_manager.set_sound_volume('enemy_projectile', 0.2 * volume_multiplier)
+                            audio_manager.play_sound('enemy_projectile')
+                        
+                        projectile.spawn_sound = False  # Only check once
             
             # Update coins
             coins.update()
-            
+
             # Update goal NPC (if exists)
             if goal_npc:
                 goal_npc.update()
 
+            # Rebuild platforms list from static platforms each frame
+            platforms = static_platforms.copy()
+
+            # Update moving platforms and add to collision list
+            for moving_platform in moving_platforms:
+                moving_platform.update()
+                platforms.append(moving_platform.rect)
+
+            # Update disappearing platforms and add to collision list (if visible)
+            player_on_disappearing = False
+            for disappearing_platform in disappearing_platforms:
+                # Check if player is standing on this platform
+                on_platform = (not disappearing_platform.disappeared and
+                              player.hitbox.bottom <= disappearing_platform.rect.top + 10 and
+                              player.hitbox.bottom >= disappearing_platform.rect.top - 5 and
+                              player.hitbox.right > disappearing_platform.rect.left and
+                              player.hitbox.left < disappearing_platform.rect.right)
+                disappearing_platform.update(on_platform)
+                # Add disappearing platforms to regular platforms list for collision (if not disappeared)
+                if not disappearing_platform.disappeared:
+                    platforms.append(disappearing_platform.rect)
+
+            # Update appearing platforms and add to collision list ONLY when solid
+            for appearing_platform in appearing_platforms:
+                appearing_platform.update()
+                # Only add to collision when the platform is fully solid
+                if appearing_platform.is_solid():
+                    platforms.append(appearing_platform.rect)
+
             # --- COLLISION DETECTION ---
             if SHOW_ENEMIES:  # Only check enemy collisions if they're enabled
                 for enemy in enemies:
+                    # Skip dead enemies completely
+                    if getattr(enemy, 'is_dead', False):
+                        continue
+
                     # Get enemy's power vulnerability settings (default to all False if not present)
                     vulnerable_to = getattr(enemy, 'vulnerable_to', {
                         'stomp': False,
                         'spin_attack': False,
                         'roll': False
                     })
-                    
+
                     # Check body hitbox collision
                     if player.hitbox.colliderect(enemy.hitbox):
                         # --- SPIN ATTACK DETECTION (check FIRST for priority) ---
                         if player.is_spinning:
-                            # Player is spin attacking - ALWAYS protected
+                            # Player is spin attacking
                             if vulnerable_to.get('spin_attack', False):
                                 # Enemy is vulnerable to spin attack - deal damage to enemy
                                 if enemy.take_damage(1):
                                     # Optional: slight bounce for player on successful hit
                                     player.vel_y = -8
-                            # If enemy is NOT vulnerable, spin attack still protects player
-                            # (no damage to either party)
+                            else:
+                                # Enemy is NOT vulnerable to spin attack - player takes damage
+                                if not player.invincible and not DEBUG_INVINCIBILITY:
+                                    knockback_direction = 1 if player.rect.centerx < enemy.rect.centerx else -1
+                                    player.take_damage(1, knockback_direction)
+                                    if ENABLE_SOUND:
+                                        audio_manager.play_sound('bump')
                         
                         # --- ROLL DETECTION ---
                         elif player.is_rolling:
                             # Player is rolling
                             if vulnerable_to.get('roll', False):
                                 # Enemy is vulnerable to roll - deal damage to enemy
-                                enemy.take_damage(1)
+                                if enemy.take_damage(1):
+                                    # Apply knockback velocity to enemy (push away from player)
+                                    knockback_direction = 1 if player.rect.centerx < enemy.rect.centerx else -1
+                                    enemy.knockback_velocity = knockback_direction * 20
+
+                                    # Stop player's roll immediately and prevent re-rolling
+                                    player.is_rolling = False
+                                    player.roll_timer = 0.0
+                                    player.roll_speed_current = player.roll_speed_initial
+                                    player.roll_cooldown = 6  # 0.1 seconds at 60 fps
+
+                                    # Reset to standing animation
+                                    player.current_frame = 0
+                                    player.frame_counter = 0.0
+
+                                    # Apply dramatic knockback - push player back and up
+                                    bounce_distance = 60  # Much stronger knockback
+                                    player.rect.x += -knockback_direction * bounce_distance
+
+                                    # Give player upward velocity for a small bounce
+                                    player.vel_y = -6  # Small upward bounce
+                                    player.on_ground = False  # Make player airborne
+
+                                    player.update_hitbox_position()
+
+                                    # Grant brief invincibility after successful roll hit (0.4 seconds)
+                                    player.invincible = True
+                                    player.invincible_timer = 24  # 0.4 seconds at 60 fps
+
+                                    # Play land_enemy sound
+                                    if ENABLE_SOUND:
+                                        audio_manager.play_sound('land_enemy')
+
+                                    # Break out of enemy loop to prevent multiple hits in one frame
+                                    break
                             else:
                                 # Enemy is NOT vulnerable to roll - player takes damage
-                                if not player.invincible:
+                                if not player.invincible and not DEBUG_INVINCIBILITY:
                                     knockback_direction = 1 if player.rect.centerx < enemy.rect.centerx else -1
                                     player.take_damage(1, knockback_direction)
-                                    if ENABLE_SOUND and bump_sound:
-                                        bump_sound.play()
+                                    if ENABLE_SOUND:
+                                        audio_manager.play_sound('bump')
                         
                         # --- STOMP DETECTION ---
-                        elif player.vel_y > 0 and player.hitbox.bottom <= enemy.hitbox.top + 15:
-                            # Player is coming from above (falling onto enemy's head)
+                        elif player.vel_y > 0 and player.hitbox.centery < enemy.hitbox.centery:
+                            # Player is coming from above (falling onto enemy) - use center comparison for more reliable detection
+                            # This prevents damage when landing on enemies under low platforms
                             if vulnerable_to.get('stomp', False):
                                 # Enemy is vulnerable to stomp - deal damage to enemy
                                 enemy.take_damage(1)
@@ -759,60 +506,60 @@ def main():
                                 if ENABLE_SOUND:
                                     # Check if enemy is a slime
                                     if hasattr(enemy, '__class__') and 'Slime' in enemy.__class__.__name__:
-                                        if land_slime_sound:
-                                            land_slime_sound.play()
+                                        if True:  # Sound handled by audio_manager
+                                            audio_manager.play_sound('land_slime')
                                     else:
-                                        if land_enemy_sound:
-                                            land_enemy_sound.play()
+                                        if True:  # Sound handled by audio_manager
+                                            audio_manager.play_sound('land_enemy')
                             else:
                                 # Enemy is NOT vulnerable to stomp - player takes damage
-                                if not player.invincible:
+                                if not player.invincible and not DEBUG_INVINCIBILITY:
                                     knockback_direction = 1 if player.rect.centerx < enemy.rect.centerx else -1
                                     player.take_damage(1, knockback_direction)
-                                    if ENABLE_SOUND and bump_sound:
-                                        bump_sound.play()
-                        
+                                    if ENABLE_SOUND:
+                                        audio_manager.play_sound('bump')
+
                         # --- NORMAL COLLISION (no special power active) ---
                         else:
                             # Regular side collision - player takes damage and knockback
-                            if not player.invincible and not player.is_spinning:
+                            if not player.invincible and not player.is_spinning and not DEBUG_INVINCIBILITY:
                                 knockback_direction = 1 if player.rect.centerx < enemy.rect.centerx else -1
                                 player.take_damage(1, knockback_direction)
-                                if ENABLE_SOUND and bump_sound:
-                                    bump_sound.play()
+                                if ENABLE_SOUND:
+                                    audio_manager.play_sound('bump')
                     
                     # Check sword hitbox collision (for Swordsman enemy)
                     if hasattr(enemy, 'sword_hitbox_active') and enemy.sword_hitbox_active:
                         if player.hitbox.colliderect(enemy.sword_hitbox):
                             # Sword always damages player UNLESS player is spin attacking
-                            if not player.invincible and not player.is_spinning:
+                            if not player.invincible and not player.is_spinning and not DEBUG_INVINCIBILITY:
                                 knockback_direction = 1 if player.rect.centerx < enemy.rect.centerx else -1
                                 player.take_damage(1, knockback_direction)
-                                if ENABLE_SOUND and bump_sound:
-                                    bump_sound.play()
-                    
+                                if ENABLE_SOUND:
+                                    audio_manager.play_sound('bump')
+
                     # Check punch hitbox collision (for Snowy enemy)
                     if hasattr(enemy, 'punch_hitbox_active') and enemy.punch_hitbox_active:
                         if player.hitbox.colliderect(enemy.punch_hitbox):
                             # Punch always damages player UNLESS player is spin attacking
-                            if not player.invincible and not player.is_spinning:
+                            if not player.invincible and not player.is_spinning and not DEBUG_INVINCIBILITY:
                                 damage = getattr(enemy, 'punch_damage', 1)
                                 knockback_direction = 1 if player.rect.centerx < enemy.rect.centerx else -1
                                 player.take_damage(damage, knockback_direction)
-                                if ENABLE_SOUND and bump_sound:
-                                    bump_sound.play()
+                                if ENABLE_SOUND:
+                                    audio_manager.play_sound('bump')
             
             # Check projectile hits (snowballs, iceballs, fireballs, spikes)
             if SHOW_ENEMIES:  # Only check projectiles if enemies are enabled
                 for projectile in projectiles:
                     if player.hitbox.colliderect(projectile.rect):
                         # Projectiles don't damage player if they're spin attacking
-                        if not player.is_spinning:
+                        if not player.is_spinning and not DEBUG_INVINCIBILITY:
                             # Knockback away from projectile
                             knockback_direction = 1 if player.rect.centerx < projectile.rect.centerx else -1
                             player.take_damage(1, knockback_direction)
-                            if ENABLE_SOUND and bump_sound:
-                                bump_sound.play()
+                            if ENABLE_SOUND:
+                                audio_manager.play_sound('bump')
                         # Always destroy the projectile on contact (even during spin)
                         projectile.kill()
             
@@ -821,8 +568,8 @@ def main():
                 if player.hitbox.colliderect(coin.hitbox):
                     coin.collect()
                     coins_collected += 1
-                    if ENABLE_SOUND and coin_sound:
-                        coin_sound.play()
+                    if ENABLE_SOUND:
+                        audio_manager.play_sound('coin')
 
             # --- CAMERA FOLLOW ---
             if player.rect.centerx - camera_x > S.WINDOW_WIDTH * 0.6:
@@ -840,16 +587,19 @@ def main():
             # Wait for player to press Enter to continue
             keys = pygame.key.get_pressed()
             if keys[pygame.K_RETURN]:
-                # TODO: Load next level or return to menu
-                # For now, just restart the game
-                print(f"✨ Level {progression.current_level} Complete!")
-                print(f"📊 Coins: {coins_collected}, Time: {level_time//60}s")
-                main()  # Restart for now
-                return
-        else:
+                # Check if there's a next level
+                next_level = progression.current_level + 1
+                if next_level in LevelManager.LEVELS:
+                    # There's a next level - advance to it
+                    progression.advance_to_next_level()
+                    return "NEXT_LEVEL"  # Signal to load next level
+                else:
+                    # No more levels - return to title screen
+                    return "LEVEL_COMPLETE"  # Return to title screen
+        elif game_over:
             # Still update player animation even when dead to show death animation
-            keys = pygame.key.get_pressed()
-            player.update(keys)
+            # But don't pass real keys - pass empty dict to prevent movement
+            player.update({})
 
         # --- RENDER ---
         screen.fill((50, 50, 80))
@@ -868,25 +618,201 @@ def main():
 
         # Draw platforms with brick texture
         if SHOW_PLATFORMS:
-            platforms_to_draw = platforms
-            if not SHOW_GROUND:
-                # Skip ground segments (first 8 platforms in the list for new level)
-                platforms_to_draw = platforms[8:]
+            # For Level 2, draw ground with snowy texture, platforms with wooden texture
+            # For other levels, draw everything with icy brick texture
             
-            for platform in platforms_to_draw:
-                # Draw brick pattern
-                draw_brick_platform(screen, platform, camera_x)
-                
-                # Optional: Draw platform outline for hitbox debugging
-                if SHOW_HITBOXES:
-                    draw_rect = pygame.Rect(platform.x - camera_x, platform.y, platform.width, platform.height)
-                    pygame.draw.rect(screen, (255, 255, 0), draw_rect, 2)
+            if world_name == "1-1":
+                # LEVEL 1: Invisible ground segments (ground_1 through ground_8), visible platforms
+                # Skip first 8 platforms which are ground segments at y=570
+                platforms_to_draw = platforms[8:]  # Skip ground_1 through ground_8
+
+                for platform in platforms_to_draw:
+                    # Draw brick pattern for platforms (not ground)
+                    draw_brick_platform(screen, platform, camera_x)
+
+                    # Optional: Draw platform outline for hitbox debugging
+                    if SHOW_HITBOXES:
+                        draw_rect = pygame.Rect(platform.x - camera_x, platform.y, platform.width, platform.height)
+                        pygame.draw.rect(screen, (255, 255, 0), draw_rect, 2)
+            elif world_name == "1-2":
+                # LEVEL 2: Snowy ground + wooden platforms
+                # Draw ground first (first platform in list)
+                if len(platforms) > 0:
+                    draw_snowy_ground(screen, platforms[0], camera_x)
+
+                # Draw all other platforms as wooden
+                for platform in platforms[1:]:
+                    draw_wooden_platform(screen, platform, camera_x)
+
+                    if SHOW_HITBOXES:
+                        draw_rect = pygame.Rect(platform.x - camera_x, platform.y, platform.width, platform.height)
+                        pygame.draw.rect(screen, (255, 255, 0), draw_rect, 2)
+            elif world_name == "1-3":
+                # LEVEL 3: Dark blue icy brick platforms
+                # Draw all platforms (including ground) with dark blue icy bricks
+                for platform in platforms:
+                    draw_icy_brick_platform(screen, platform, camera_x)
+
+                    if SHOW_HITBOXES:
+                        draw_rect = pygame.Rect(platform.x - camera_x, platform.y, platform.width, platform.height)
+                        pygame.draw.rect(screen, (255, 255, 0), draw_rect, 2)
+
+                # Draw moving platforms
+                for moving_platform in moving_platforms:
+                    draw_icy_brick_platform(screen, moving_platform.rect, camera_x)
+
+                    if SHOW_HITBOXES:
+                        draw_rect = pygame.Rect(moving_platform.rect.x - camera_x, moving_platform.rect.y,
+                                               moving_platform.rect.width, moving_platform.rect.height)
+                        pygame.draw.rect(screen, (0, 255, 255), draw_rect, 2)  # Cyan for moving platforms
+
+                # Draw disappearing platforms (same style as Level 4)
+                for disappearing_platform in disappearing_platforms:
+                    if not disappearing_platform.disappeared:
+                        # Create a semi-transparent surface
+                        platform_surface = pygame.Surface((disappearing_platform.rect.width, disappearing_platform.rect.height))
+                        platform_surface.set_colorkey((0, 0, 0))
+
+                        # Fill with semi-transparent white/blue ice color
+                        ice_color = (180, 200, 220)
+                        pygame.draw.rect(platform_surface, ice_color, (0, 0, disappearing_platform.rect.width, disappearing_platform.rect.height))
+
+                        # Draw border (black/grey) to make it clear
+                        border_color = (50, 50, 50) if not disappearing_platform.should_shake() else (100, 100, 100)
+                        pygame.draw.rect(platform_surface, border_color, (0, 0, disappearing_platform.rect.width, disappearing_platform.rect.height), 3)
+
+                        # Apply transparency
+                        platform_surface.set_alpha(disappearing_platform.get_alpha())
+
+                        # Apply pulse effect if warning about state change
+                        pulse_offset = 0
+                        if disappearing_platform.should_shake():
+                            import random
+                            pulse_offset = random.randint(-1, 1)
+
+                        # Draw to screen
+                        screen.blit(platform_surface,
+                                   (disappearing_platform.rect.x - camera_x,
+                                    disappearing_platform.rect.y + pulse_offset))
+
+                        if SHOW_HITBOXES:
+                            draw_rect = pygame.Rect(disappearing_platform.rect.x - camera_x, disappearing_platform.rect.y,
+                                                   disappearing_platform.rect.width, disappearing_platform.rect.height)
+                            pygame.draw.rect(screen, (255, 0, 255), draw_rect, 2)  # Magenta for disappearing platforms
+            elif world_name == "1-4":
+                # LEVEL 4: Glowing northern lights platforms with animated colors
+                # Draw all platforms (including ground) with animated northern lights effect
+                for platform in platforms:
+                    draw_northern_lights_ground(screen, platform, camera_x)
+
+                    if SHOW_HITBOXES:
+                        draw_rect = pygame.Rect(platform.x - camera_x, platform.y, platform.width, platform.height)
+                        pygame.draw.rect(screen, (255, 255, 0), draw_rect, 2)
+
+                # Draw moving platforms
+                for moving_platform in moving_platforms:
+                    draw_northern_lights_ground(screen, moving_platform.rect, camera_x)
+
+                    if SHOW_HITBOXES:
+                        draw_rect = pygame.Rect(moving_platform.rect.x - camera_x, moving_platform.rect.y,
+                                                moving_platform.rect.width, moving_platform.rect.height)
+                        pygame.draw.rect(screen, (0, 255, 255), draw_rect, 2)  # Cyan for moving platforms
+
+                # Draw disappearing platforms with same design as Level 4 appearing platforms
+                for disappearing_platform in disappearing_platforms:
+                    if not disappearing_platform.disappeared:
+                        # Create a semi-transparent surface (matching Level 4 style)
+                        platform_surface = pygame.Surface((disappearing_platform.rect.width, disappearing_platform.rect.height))
+                        platform_surface.set_colorkey((0, 0, 0))
+
+                        # Fill with semi-transparent white/blue ice color (same as Level 4)
+                        ice_color = (180, 200, 220)
+                        pygame.draw.rect(platform_surface, ice_color, (0, 0, disappearing_platform.rect.width, disappearing_platform.rect.height))
+
+                        # Draw solid border (not dashed) - matching Level 4 style
+                        # Use red warning color if about to disappear, otherwise black/grey
+                        if disappearing_platform.should_shake():
+                            border_color = (255, 50, 50)  # Red warning when shaking
+                        else:
+                            border_color = (50, 50, 50)  # Dark grey/black normally (matches Level 4)
+
+                        pygame.draw.rect(platform_surface, border_color, (0, 0, disappearing_platform.rect.width, disappearing_platform.rect.height), 3)
+
+                        # Apply alpha for fade effect
+                        platform_surface.set_alpha(disappearing_platform.get_alpha())
+
+                        # Apply pulse effect if warning (same as Level 4 appearing platforms)
+                        pulse_offset = 0
+                        if disappearing_platform.should_shake():
+                            import random
+                            pulse_offset = random.randint(-1, 1)
+
+                        # Draw to screen
+                        screen.blit(platform_surface,
+                                   (disappearing_platform.rect.x - camera_x,
+                                    disappearing_platform.rect.y + pulse_offset))
+
+                        if SHOW_HITBOXES:
+                            draw_rect = pygame.Rect(disappearing_platform.rect.x - camera_x, disappearing_platform.rect.y,
+                                                   disappearing_platform.rect.width, disappearing_platform.rect.height)
+                            pygame.draw.rect(screen, (255, 0, 255), draw_rect, 2)  # Magenta for disappearing platforms
+
+                # Draw appearing platforms with transparency and border
+                for appearing_platform in appearing_platforms:
+                    if appearing_platform.get_alpha() > 0:  # Only draw if visible at all
+                        # Create a semi-transparent surface
+                        platform_surface = pygame.Surface((appearing_platform.rect.width, appearing_platform.rect.height))
+                        platform_surface.set_colorkey((0, 0, 0))
+
+                        # Fill with semi-transparent white/blue ice color
+                        ice_color = (180, 200, 220)
+                        pygame.draw.rect(platform_surface, ice_color, (0, 0, appearing_platform.rect.width, appearing_platform.rect.height))
+
+                        # Draw border (black/grey) to make it clear
+                        border_color = (50, 50, 50) if appearing_platform.is_solid() else (100, 100, 100)
+                        pygame.draw.rect(platform_surface, border_color, (0, 0, appearing_platform.rect.width, appearing_platform.rect.height), 3)
+
+                        # Apply transparency
+                        platform_surface.set_alpha(appearing_platform.get_alpha())
+
+                        # Apply pulse effect if warning about state change
+                        pulse_offset = 0
+                        if appearing_platform.should_pulse():
+                            import random
+                            pulse_offset = random.randint(-1, 1)
+
+                        # Draw to screen
+                        screen.blit(platform_surface,
+                                   (appearing_platform.rect.x - camera_x,
+                                    appearing_platform.rect.y + pulse_offset))
+
+                        if SHOW_HITBOXES:
+                            draw_rect = pygame.Rect(appearing_platform.rect.x - camera_x, appearing_platform.rect.y,
+                                                   appearing_platform.rect.width, appearing_platform.rect.height)
+                            color = (0, 255, 0) if appearing_platform.is_solid() else (128, 128, 128)
+                            pygame.draw.rect(screen, color, draw_rect, 2)
+            else:
+                # OTHER LEVELS: Icy brick texture, skip ground
+                platforms_to_draw = platforms[1:]  # Skip invisible ground
+
+                for platform in platforms_to_draw:
+                    # Draw brick pattern
+                    draw_brick_platform(screen, platform, camera_x)
+
+                    # Optional: Draw platform outline for hitbox debugging
+                    if SHOW_HITBOXES:
+                        draw_rect = pygame.Rect(platform.x - camera_x, platform.y, platform.width, platform.height)
+                        pygame.draw.rect(screen, (255, 255, 0), draw_rect, 2)
 
         # Draw enemies - only if enabled
         if SHOW_ENEMIES:
             for enemy in enemies:
+                # Skip drawing enemies that have completed their death animation
+                if getattr(enemy, 'death_complete', False):
+                    continue
+
                 screen.blit(enemy.image, (enemy.rect.x - camera_x, enemy.rect.y))
-                
+
                 # Draw enemy health above them
                 enemy_health_ui.draw(screen, enemy, camera_x)
                 
@@ -946,8 +872,9 @@ def main():
         roll_stamina_ui.draw(screen, player, camera_x)
         spin_charge_ui.draw(screen, player, camera_x)
         
-        # Draw game HUD (coins, world, time)
-        draw_game_hud(screen, coins_collected, level_time, world_name)
+        # Draw game HUD (coins, world, time, difficulty, coins remaining)
+        coins_remaining = progression.get_coins_remaining(progression.current_level, coins_collected)
+        draw_game_hud(screen, coins_collected, level_time, world_name, progression.difficulty, coins_remaining)
         
         # --- DEBUG: DRAW PLAYER POSITION ---
         if SHOW_HITBOXES:  # Only show when hitboxes are enabled
@@ -969,16 +896,133 @@ def main():
             if death_fade_alpha < 255:
                 death_fade_alpha = min(255, death_fade_alpha + death_fade_speed)
             
-            draw_death_screen(screen)
+            # Update and draw death menu
+            death_menu.update()
+            death_menu.draw(screen)
         
         # --- LEVEL COMPLETE CUTSCENE ---
         if cutscene_active:
             draw_level_complete_screen(screen, progression.current_level, coins_collected, level_time)
+        
+        # --- PAUSE MENU OVERLAY ---
+        if paused:
+            pause_menu.update()
+            pause_menu.draw(screen)
 
+        # Scale render surface to display screen
+        scaled_surface = pygame.transform.scale(screen, (display_width, display_height))
+        display_screen.blit(scaled_surface, (0, 0))
         pygame.display.flip()
 
     pygame.quit()
     sys.exit()
 
 if __name__ == "__main__":
-    main()
+    # Initialize pygame first (needed for username input)
+    pygame.init()
+
+    # Create display for username input
+    display_width = int(S.WINDOW_WIDTH * S.DISPLAY_SCALE)
+    display_height = int(S.WINDOW_HEIGHT * S.DISPLAY_SCALE)
+    screen = pygame.display.set_mode((display_width, display_height))
+    pygame.display.set_caption(S.TITLE)
+
+    # Initialize progression system
+    progression = GameProgression()
+
+    # Load config to check if DEBUG_UNLOCK_ALL_LEVELS is enabled
+    from config_loader import get_config
+    config = get_config()
+
+    # Load saved progress and username (unless in debug mode)
+    current_username = None
+    if not config.get('debug.unlock_all_levels', True):
+        success, username = SaveSystem.load_progress(progression)
+        if success and username:
+            current_username = username
+            print(f"📁 Loaded progress: {username} - Level {progression.current_level}/{progression.max_level_reached}")
+        else:
+            print("ℹ️ No save file found.")
+    else:
+        # Debug mode: unlock all levels
+        progression.max_level_reached = len(LevelManager.LEVELS)
+        print(f"🔓 DEBUG: All {len(LevelManager.LEVELS)} levels unlocked")
+        # Abilities are NOT unlocked - player must earn them by completing levels
+
+    # If no username, prompt for one
+    if current_username is None:
+        from ui.username_input import show_username_input
+        current_username = show_username_input(screen)
+        if current_username is None:
+            # User closed window during username input
+            pygame.quit()
+            sys.exit()
+        print(f"👤 Welcome, {current_username}!")
+        # Update progression with username
+        progression.username = current_username
+        # Save progress with new username
+        SaveSystem.save_progress(progression, current_username)
+    else:
+        # Username was loaded from save file, update progression
+        progression.username = current_username
+    
+    # Main game loop - keeps running until player quits
+    while True:
+        # Show title screen and get selection
+        result = show_title_screen(progression, disable_audio=DISABLE_ALL_AUDIO)
+        
+        # If user closed window during title screen, exit
+        if result is None:
+            break
+        
+        # Handle menu selection
+        if result == "START":
+            # Start from level 1
+            progression.current_level = 1
+        elif result.startswith("LEVEL_"):
+            # Start from selected level
+            level_num = int(result.split("_")[1])
+            progression.set_level(level_num)
+
+        # Track which levels have shown their tutorial
+        tutorials_shown = set()
+
+        # Play through levels with transitions
+        playing = True
+        while playing:
+            # Show level transition and tutorial screens for this level if not yet shown
+            if progression.current_level not in tutorials_shown:
+                show_level_transition(progression.current_level, disable_audio=DISABLE_ALL_AUDIO)
+                tutorials_shown.add(progression.current_level)
+
+            # Play current level
+            game_result = main(progression)
+            
+            # Handle result
+            if game_result == "QUIT":
+                # Player wants to quit entirely
+                pygame.quit()
+                sys.exit()
+            
+            elif game_result == "NEXT_LEVEL":
+                # Level completed - show transition screen
+                show_level_transition(progression.current_level, disable_audio=DISABLE_ALL_AUDIO)
+                tutorials_shown.add(progression.current_level)
+                # Continue to next level (progression already advanced)
+                continue
+            
+            elif game_result == "LEVEL_COMPLETE":
+                # Final level completed or player chose to return to menu
+                playing = False
+            
+            elif game_result == "MAIN_MENU":
+                # Player chose to return to main menu
+                playing = False
+            
+            elif game_result == "RESTART":
+                # Player restarted level - just loop and replay current level
+                continue
+            
+            else:
+                # Unknown result - return to title screen
+                playing = False

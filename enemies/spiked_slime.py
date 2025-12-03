@@ -102,7 +102,9 @@ class SpikedSlime(pygame.sprite.Sprite):
         # --- PLATFORM BOUNDARY ENFORCEMENT ---
         self.platform_left = patrol_left
         self.platform_right = patrol_right
-        self.enforce_boundaries = True  # Keep on platform
+        self.enforce_boundaries = False  # Let them chase off platform!
+        self.home_platform_left = patrol_left  # Remember home for patrol
+        self.home_platform_right = patrol_right
         
         # Movement - Melee focused
         self.base_speed = 1.5  # Moderate speed
@@ -118,14 +120,20 @@ class SpikedSlime(pygame.sprite.Sprite):
         
         # --- MELEE-FOCUSED BEHAVIOR ---
         self.tracking_mode = False
-        self.detection_range = 400  # Notice player from moderate distance
-        self.melee_preference_range = 300  # Prefers to get close
-        self.spike_range_max = 350  # Only shoots if too far to chase
+        self.detection_range = 500  # Notice player from farther away
+        self.melee_preference_range = 450  # Almost always prefers melee
+        self.spike_range_max = 350  # Only shoots if really far
         
-        # Attack mechanics - Rare spikes, prefers melee
-        self.attack_cooldown = random.randint(120, 180)  # Longer cooldown
-        self.attack_cooldown_min = 160  # Even less frequent
-        self.attack_cooldown_max = 240
+        # Movement personality - add variety
+        self.aggression_level = random.uniform(0.8, 1.2)  # Some are more aggressive
+        self.zigzag_enabled = random.choice([True, False])  # Some zigzag when chasing
+        self.zigzag_timer = 0
+        self.zigzag_offset = 0
+        
+        # Attack mechanics - Very rare spikes, strongly prefers melee
+        self.attack_cooldown = random.randint(200, 300)  # Much longer cooldown
+        self.attack_cooldown_min = 240  # Very infrequent
+        self.attack_cooldown_max = 360  # Up to 6 seconds between spikes
         self.is_attacking = False
         self.attack_frame_trigger = 2
         self.attack_windup_pause_frame = 1
@@ -141,13 +149,26 @@ class SpikedSlime(pygame.sprite.Sprite):
         self.health = 1  # One-hit enemy
         self.max_health = 1
         self.is_dead = False
+        self.death_complete = False  # Flag for when death animation finishes
         self.hurt_flash_timer = 0
         self.invincible = False
         self.invincible_timer = 0
-        
+
         # Gravity
         self.vel_y = 0
         self.gravity = 0.6
+
+        # Knockback
+        self.knockback_velocity = 0
+        self.knockback_decay = 0.85
+
+        # Load attack sound
+        try:
+            self.attack_sound = pygame.mixer.Sound("assets/sounds/enemy_projectile.ogg")
+            self.attack_sound.set_volume(0.3)
+        except Exception as e:
+            # Silently fail if mixer not initialized
+            self.attack_sound = None
         
     def load_sprite_sheet(self, path, frame_count, target_height=80):
         sheet = pygame.image.load(path).convert_alpha()
@@ -190,10 +211,17 @@ class SpikedSlime(pygame.sprite.Sprite):
             self.invincible_timer -= 1
             if self.invincible_timer == 0:
                 self.invincible = False
-        
+
+        # Apply knockback
+        if self.knockback_velocity != 0:
+            self.rect.x += self.knockback_velocity
+            self.knockback_velocity *= self.knockback_decay
+            if abs(self.knockback_velocity) < 0.5:
+                self.knockback_velocity = 0
+
         # --- ATTACKING STATE ---
         if self.is_attacking:
-            self.animate_attack(projectile_group)
+            self.animate_attack(projectile_group, player)
             self.update_hitbox_position()
             return
         
@@ -222,61 +250,68 @@ class SpikedSlime(pygame.sprite.Sprite):
                 self.tracking_mode = True
                 self.facing_right = dx > 0
                 
-                # AGGRESSIVE MELEE CHASE
+                # AGGRESSIVE MELEE CHASE - This is the primary behavior
                 if distance < self.melee_preference_range:
-                    # Close enough - RUSH IN for melee!
-                    current_speed = self.chase_speed
+                    # RUSH IN for melee contact!
+                    current_speed = self.chase_speed * self.aggression_level
                     move_direction = 1 if dx > 0 else -1
                     
-                    # Very rarely shoot while chasing (only 2% chance - reduced)
-                    if self.attack_cooldown <= 0 and random.randint(0, 49) == 0:
+                    # Add zigzag movement for variety (some slimes do this)
+                    if self.zigzag_enabled:
+                        self.zigzag_timer += 1
+                        if self.zigzag_timer > 30:  # Change direction every 0.5 seconds
+                            self.zigzag_timer = 0
+                            self.zigzag_offset = random.choice([-1, 0, 1])
+                        
+                        # Occasionally move perpendicular briefly
+                        if self.zigzag_offset != 0 and random.randint(0, 10) == 0:
+                            move_direction = self.zigzag_offset
+                    
+                    # EXTREMELY RARE spike throw while chasing (only 1% chance)
+                    if self.attack_cooldown <= 0 and random.randint(0, 99) == 0:
                         self.start_attack()
-                        self.attack_cooldown = random.randint(180, 260)
+                        self.attack_cooldown = random.randint(240, 360)
                 
                 else:
-                    # Too far for effective melee - shoot spikes
-                    current_speed = self.speed * 0.8  # Slow down to shoot
-                    
-                    # Still move toward player
+                    # Too far for effective melee - move toward player first
+                    current_speed = self.speed * 1.1
                     move_direction = 1 if dx > 0 else -1
                     
-                    # Shoot if in range
-                    if self.attack_cooldown <= 0:
-                        self.start_attack()
-                        self.attack_cooldown = random.randint(self.attack_cooldown_min, self.attack_cooldown_max)
+                    # Only shoot spikes if REALLY far (10% chance when far)
+                    if distance > self.spike_range_max and self.attack_cooldown <= 0:
+                        if random.randint(0, 9) == 0:  # 10% chance
+                            self.start_attack()
+                            self.attack_cooldown = random.randint(self.attack_cooldown_min, self.attack_cooldown_max)
             else:
                 self.tracking_mode = False
         
-        # --- MOVEMENT WITH PLATFORM BOUNDARIES ---
+        # --- MOVEMENT WITH SMART BOUNDARIES ---
         if should_move and move_direction != 0:
             new_x = self.rect.x + (current_speed * move_direction)
             
-            # Check platform boundaries
-            if self.enforce_boundaries:
+            # Only enforce boundaries when NOT tracking (i.e., when patrolling)
+            if not self.tracking_mode and self.enforce_boundaries:
                 future_hitbox_center = new_x + (self.rect.width // 2) + (self.hitbox_offset_x if not self.facing_right else -self.hitbox_offset_x)
                 
                 if self.platform_left <= future_hitbox_center <= self.platform_right:
                     self.rect.x = new_x
                     self.direction = move_direction
                 else:
-                    # Hit boundary - turn around if not tracking
-                    if not self.tracking_mode:
-                        self.direction *= -1
-                        self.facing_right = not self.facing_right
-                    # If tracking, just stop at edge and shoot (less frequently)
-                    elif self.attack_cooldown <= 0 and random.randint(0, 2) == 0:  # 33% chance
-                        self.start_attack()
-                        self.attack_cooldown = random.randint(140, 200)
+                    # Hit patrol boundary while patrolling - turn around
+                    self.direction *= -1
+                    self.facing_right = not self.facing_right
             else:
+                # Tracking player OR no boundary enforcement - move freely!
                 self.rect.x = new_x
                 self.direction = move_direction
         
-        # --- PATROL BOUNDS ---
+        # --- PATROL BOUNDS (only when NOT tracking) ---
         if not self.tracking_mode and not self.enforce_boundaries:
-            if self.direction == -1 and self.rect.left <= self.patrol_left:
+            # Use home platform for patrol boundaries
+            if self.direction == -1 and self.rect.left <= self.home_platform_left:
                 self.direction = 1
                 self.facing_right = True
-            elif self.direction == 1 and self.rect.right >= self.patrol_right:
+            elif self.direction == 1 and self.rect.right >= self.home_platform_right:
                 self.direction = -1
                 self.facing_right = False
             
@@ -328,7 +363,7 @@ class SpikedSlime(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(centerx=old_centerx, bottom=old_bottom)
         self.update_hitbox_position()
     
-    def animate_attack(self, projectile_group):
+    def animate_attack(self, projectile_group, player=None):
         """Handle attack animation and spike shooting"""
         # Pause at windup
         if self.current_frame == self.attack_windup_pause_frame and self.attack_pause_timer < self.attack_pause_duration:
@@ -352,7 +387,7 @@ class SpikedSlime(pygame.sprite.Sprite):
             
             # Shoot spikes
             if self.current_frame == self.attack_frame_trigger and not self.has_shot_spikes:
-                self.shoot_spikes(projectile_group)
+                self.shoot_spikes(projectile_group, player)
                 self.has_shot_spikes = True
             
             # End attack
@@ -371,19 +406,25 @@ class SpikedSlime(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(centerx=old_centerx, bottom=old_bottom)
         self.update_hitbox_position()
     
-    def shoot_spikes(self, projectile_group):
+    def shoot_spikes(self, projectile_group, player=None):
         """Shoot 2 spikes in a spread pattern (reduced from 3)"""
         spike_x = self.rect.centerx
         spike_y = self.rect.centery - 10
-        
+
         direction = 1 if self.facing_right else -1
-        
+
         # Create 2 spikes with different trajectories
         for i in range(2):
             spike = Spike(spike_x, spike_y, direction)
             spike.speed_y = -8 - (i * 3)  # -8, -11
             spike.speed_x = 5 + (i * 0.5)
             projectile_group.add(spike)
+
+        # Play attack sound only if player is nearby (within 600 pixels)
+        if self.attack_sound and player:
+            distance = abs(player.hitbox.centerx - self.hitbox.centerx)
+            if distance < 600:
+                self.attack_sound.play()
     
     def animate_walk(self):
         """Animate walking"""
@@ -405,16 +446,18 @@ class SpikedSlime(pygame.sprite.Sprite):
     def take_damage(self, damage=1):
         """Handle taking damage"""
         if self.is_dead or self.invincible:
-            return
-        
+            return False
+
         self.health -= damage
-        
+
         if self.health <= 0:
             self.die()
         else:
             self.hurt_flash_timer = 20
             self.invincible = True
             self.invincible_timer = 60
+
+        return True
     
     def die(self):
         """Trigger death sequence"""
@@ -426,18 +469,25 @@ class SpikedSlime(pygame.sprite.Sprite):
     def animate_death(self):
         """Play death animation and remove sprite"""
         self.frame_counter += 0.20
-        
+
         if self.frame_counter >= 1.0:
             self.frame_counter = 0.0
             self.current_frame += 1
-            
+
             if self.current_frame >= len(self.death_frames):
+                self.death_complete = True
                 self.kill()
                 return
-        
+
+        # Safety check: ensure current_frame is within bounds
+        if self.current_frame >= len(self.death_frames):
+            self.death_complete = True
+            self.kill()
+            return
+
         old_bottom = self.rect.bottom
         old_centerx = self.rect.centerx
-        
+
         base_image = self.death_frames[self.current_frame]
         self.image = pygame.transform.flip(base_image, True, False) if self.facing_right else base_image
         

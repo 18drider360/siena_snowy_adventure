@@ -32,9 +32,19 @@ def build_level(abilities=None):
       - coins sprite group
       - world name (for HUD display)
       - goal_npc (NPC at level end)
+      - background_layers (list of image paths)
     """
     bg_color = None
     world_name = "1-1"
+    
+    # Background layers for mountain theme (parallax from back to front)
+    background_layers = [
+        "assets/images/backgrounds/mountains/5.png",
+        "assets/images/backgrounds/mountains/4.png",
+        "assets/images/backgrounds/mountains/3.png",
+        "assets/images/backgrounds/mountains/2.png",
+        "assets/images/backgrounds/mountains/1.png",
+    ]
 
     # ===================================================================
     # CHAPTER 1: SAFE EXPLORATION (0-1000px)
@@ -42,19 +52,19 @@ def build_level(abilities=None):
     # ===================================================================
     
     # Main ground - continuous for safe start
-    ground_1 = pygame.Rect(0, 570, 1200, 40)
+    ground_1 = pygame.Rect(0, 570, 1200,  30)
     
     # First platforms - teach basic jumping (easy jumps)
     platform1 = pygame.Rect(600, 500, 100, 25)      # Low platform - easy reach
-    platform2 = pygame.Rect(800, 480, 100, 25)      # Slightly higher
-    block1 = pygame.Rect(950, 450, 50, 50)          # Mario-style block with coin
+    platform2 = pygame.Rect(800, 450, 100, 25)      # Higher with better spacing
+    block1 = pygame.Rect(950, 420, 50, 50)          # Mario-style block with coin
     
     # ===================================================================
     # CHAPTER 2: JUMP MASTERY (1000-2500px)
     # Teaches: Double-jump mechanic, platform chains, vertical jumping
     # ===================================================================
     
-    ground_2 = pygame.Rect(1200, 570, 600, 40)
+    ground_2 = pygame.Rect(1200, 570, 600,  30)
     
     # Double-jump introduction - coins mark the path
     platform3 = pygame.Rect(1400, 480, 120, 25)
@@ -62,7 +72,7 @@ def build_level(abilities=None):
     platform5 = pygame.Rect(1800, 360, 120, 25)     # Requires double-jump (coins guide)
     
     # Back to ground level
-    ground_3 = pygame.Rect(1800, 570, 500, 40)
+    ground_3 = pygame.Rect(1800, 570, 500,  30)
     
     # Platform chain - practice consecutive jumps
     platform6 = pygame.Rect(2100, 480, 100, 25)
@@ -74,40 +84,40 @@ def build_level(abilities=None):
     # Teaches: Pit mechanics safely, elevated enemy encounters
     # ===================================================================
     
-    ground_4 = pygame.Rect(2300, 570, 400, 40)
+    ground_4 = pygame.Rect(2300, 570, 400,  30)
     
     # FIRST PIT - Safe with floor (non-lethal)
-    hazard0 = pygame.Rect(2700, 570, 350, 40) 
-    
+    hazard0 = pygame.Rect(2700, 530, 100, 30)  # Fire hazard (40px tall, smaller flames) - shortened to not overlap platforms
+
     # Platforms around safe pit
     platform9 = pygame.Rect(2550, 520, 150, 30)      # Before pit
     platform10 = pygame.Rect(2800, 520, 100, 30)     # After pit
-    
-    ground_5 = pygame.Rect(3050, 570, 350, 40)
-    
+
+    ground_5 = pygame.Rect(3050, 570, 350,  30)
+
     # Elevated area with enemies
     platform11 = pygame.Rect(3150, 450, 200, 30)
     block2 = pygame.Rect(3300, 400, 50, 50)          # Block above platform
-    
+
     # ===================================================================
     # CHAPTER 4: REAL DANGER (3500-4500px)
     # Teaches: Lethal consequences, precision jumping, enemy + pit combo
     # ===================================================================
-    
-    ground_6 = pygame.Rect(3400, 570, 150, 40)
-    
+
+    ground_6 = pygame.Rect(3400, 570, 150,  30)
+
     # FIRST LETHAL PIT - Similar to safe pit but deadly
-    hazard1 = pygame.Rect(3550, 570, 500, 40)        # No floor - instant death
-    
+    hazard1 = pygame.Rect(3700, 530, 200, 30)  # Fire hazard (40px tall, smaller flames) - positioned between platforms
+
     # Platforms around lethal pit
     platform12 = pygame.Rect(3550, 520, 150, 30)     # Before pit
     platform13 = pygame.Rect(3900, 520, 150, 30)     # After pit - enemy on this
-    
-    ground_7 = pygame.Rect(4050, 570, 250, 40)
-    
+
+    ground_7 = pygame.Rect(4050, 570, 250,  30)
+
     # Challenge section - wider gap requiring running jump
-    hazard2 = pygame.Rect(4300, 570, 450, 40)        # Wider lethal pit
-    
+    hazard2 = pygame.Rect(4300, 530, 300, 30)  # Fire hazard (40px tall, smaller flames) - shortened to not overlap platforms
+
     platform14 = pygame.Rect(4150, 500, 150, 30)     # Launch platform
     platform15 = pygame.Rect(4600, 500, 100, 30)     # Landing platform
     
@@ -133,17 +143,21 @@ def build_level(abilities=None):
     # ===================================================================
     # COMPILE PLATFORMS AND HAZARDS
     # ===================================================================
-    
+
+    # INVISIBLE GROUND - spans entire level so enemies don't fall through
+    invisible_ground = pygame.Rect(0, 570, LEVEL_WIDTH,  30)
+
     platforms = [
+        invisible_ground,  # Full-width invisible ground (drawn first, will be hidden by SHOW_GROUND = False)
         ground_1, ground_2, ground_3, ground_4, ground_5, ground_6, ground_7, ground_8,
-        platform1, platform2, platform3, platform4, platform5, platform6, platform7, 
-        platform8, platform9, platform10, platform11, platform12, platform13, platform14, 
+        platform1, platform2, platform3, platform4, platform5, platform6, platform7,
+        platform8, platform9, platform10, platform11, platform12, platform13, platform14,
         platform15, goal_platform, npc_platform,
         block1, block2,
          # Safe pit has floor
         stair1, stair2, stair3
     ]
-    
+
     hazards = [hazard0, hazard1, hazard2]  # Only 2 lethal pits
 
     # ===================================================================
@@ -160,7 +174,14 @@ def build_level(abilities=None):
             'spin': False
         }
     
-    player = Siena(120, 569, abilities=abilities)
+    # Player spawn: Ground platform top is at Y=570
+    # Working backwards from desired hitbox.bottom = 570:
+    # - hitbox.bottom = 570
+    # - hitbox height = 45, so hitbox.y = 525
+    # - After -90 offset applied, hitbox.y should be 525, so before offset: hitbox.y = 615
+    # - hitbox.bottom before offset = 615 + 45 = 660 = rect.bottom
+    # So spawn at Y=660
+    player = Siena(120, 660, abilities=abilities, max_health=6)  # 3 hearts (6 lives)
 
     # ===================================================================
     # ENEMY PLACEMENT - Strategic and Educational
@@ -216,7 +237,7 @@ def build_level(abilities=None):
     coins = pygame.sprite.Group()
     
     # CHAPTER 1: First coins - ground level (safe collection)
-    for i in range(3):
+    for i in range(2):
         coins.add(Coin(250 + i * 60, 530))
     
     # Coin above first platform (teaches jumping for rewards)
@@ -227,7 +248,7 @@ def build_level(abilities=None):
     
     # CHAPTER 2: Coins teaching double-jump
     # Horizontal line leading to elevated platforms
-    for i in range(3):
+    for i in range(2):
         coins.add(Coin(1350 + i * 60, 530))
     
     # Coins on platforms
@@ -235,28 +256,20 @@ def build_level(abilities=None):
     coins.add(Coin(1650, 380))
     
     # VERTICAL ARC - Teaches double-jump trajectory (IMPORTANT!)
-    coins.add(Coin(1750, 420))
     coins.add(Coin(1780, 360))  # Peak - requires double-jump
     coins.add(Coin(1810, 320))
     
     # Coin trail across platform chain
     coins.add(Coin(2150, 440))
-    coins.add(Coin(2300, 440))
     coins.add(Coin(2450, 440))
     
     # CHAPTER 3: Coins around safe pit (teaching trajectory)
-    for i in range(2):
-        coins.add(Coin(2900 + i * 60, 530))
-    
     # COIN ARC ABOVE SAFE PIT - Shows jump path
-    coins.add(Coin(2650, 480))
     coins.add(Coin(2720, 460))
     coins.add(Coin(2790, 460))
-    coins.add(Coin(2860, 480))
     
     # Coins on elevated platform with enemy
-    coins.add(Coin(3200, 410))
-    coins.add(Coin(3275, 410))
+    coins.add(Coin(3237, 410))
     
     # Coin in elevated block
     coins.add(Coin(3325, 360))
@@ -280,10 +293,8 @@ def build_level(abilities=None):
         coins.add(Coin(4050 + i * 70, 530))
     
     # COIN TRAIL ACROSS WIDE GAP - Shows it's possible
-    coins.add(Coin(4250, 480))
-    coins.add(Coin(4350, 460))
-    coins.add(Coin(4450, 460))
-    coins.add(Coin(4520, 480))
+    coins.add(Coin(4300, 470))
+    coins.add(Coin(4470, 470))
     
     # CHAPTER 5: Victory coins - generous reward
     # Coins on stairs
@@ -292,11 +303,9 @@ def build_level(abilities=None):
     coins.add(Coin(4985, 380))
     
     # Victory coin arc to the right of final stair
-    coins.add(Coin(5050, 360))
     coins.add(Coin(5090, 340))
     coins.add(Coin(5130, 320))
     coins.add(Coin(5170, 340))
-    coins.add(Coin(5210, 360))
 
     # ===================================================================
     # LEVEL GOAL NPC
@@ -304,4 +313,4 @@ def build_level(abilities=None):
     
     goal_npc = LevelGoalNPC(x=5260, y=320)  # Standing on npc_platform
 
-    return bg_color, platforms, hazards, LEVEL_WIDTH, player, enemies, projectiles, coins, world_name, goal_npc
+    return bg_color, platforms, hazards, LEVEL_WIDTH, player, enemies, projectiles, coins, world_name, goal_npc, background_layers
