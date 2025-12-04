@@ -77,6 +77,7 @@ def main(progression):
     game_over = False
     level_complete = False
     cutscene_active = False
+    cutscene_selected_button = "continue"  # "continue" or "menu"
     paused = False  # NEW: Pause state
     death_fade_alpha = 0
     death_fade_speed = 5
@@ -114,103 +115,94 @@ def main(progression):
     running = True
     while running:
         dt = clock.tick(S.FPS)
-        
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            
-            if event.type == pygame.KEYDOWN:
-                # --- PAUSE TOGGLE (check this FIRST) ---
-                if event.key == pygame.K_ESCAPE:
-                    if not game_over and not cutscene_active:
-                        paused = not paused  # Toggle pause
-                        if paused:
-                            pause_menu.selected_index = 0  # Reset selection
-                            audio_manager.pause_music()  # Pause music
-                        else:
+
+        # Handle events differently based on game state
+        if not cutscene_active:
+            # Normal game event handling
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+
+                if event.type == pygame.KEYDOWN:
+                    # --- PAUSE TOGGLE (check this FIRST) ---
+                    if event.key == pygame.K_ESCAPE:
+                        if not game_over and not cutscene_active:
+                            paused = not paused  # Toggle pause
+                            if paused:
+                                pause_menu.selected_index = 0  # Reset selection
+                                audio_manager.pause_music()  # Pause music
+                            else:
+                                audio_manager.unpause_music()  # Resume music
+                        elif paused:
+                            paused = False  # ESC also unpauses
                             audio_manager.unpause_music()  # Resume music
-                    elif paused:
-                        paused = False  # ESC also unpauses
-                        audio_manager.unpause_music()  # Resume music
-                    continue  # Don't process other keys when pressing ESC
-                
-                # Handle pause menu input (only if paused)
-                if paused:
-                    result = pause_menu.handle_input(event)
-                    if result == "CONTINUE":
-                        paused = False
-                        audio_manager.unpause_music()  # Resume music
-                    elif result == "RESTART":
-                        audio_manager.stop_music()  # Stop music before restart
-                        return "RESTART"  # Signal to restart
-                    elif result == "MAIN MENU":
-                        audio_manager.stop_music()  # Stop music before returning to menu
-                        return "MAIN_MENU"  # Return to title screen
-                    continue  # Skip other inputs while paused
-                
-                # Handle death menu input (only if showing death screen)
-                if show_death_screen:
-                    result = death_menu.handle_input(event)
-                    if result == "RESTART":
-                        audio_manager.stop_music()  # Stop music before restart
-                        return "RESTART"  # Signal to restart
-                    elif result == "MAIN MENU":
-                        audio_manager.stop_music()  # Stop music before returning to menu
-                        return "MAIN_MENU"  # Return to title screen
-                    continue  # Skip other inputs on death screen
-                
-                # Jump (only if not dead, not paused, and not on death screen)
-                if not game_over and not paused and not show_death_screen:
-                    if event.key in (pygame.K_SPACE, pygame.K_UP, pygame.K_w):
-                        player.jump(audio_manager.get_sound('jump'),
-                                   audio_manager.get_sound('double_jump'))
+                        continue  # Don't process other keys when pressing ESC
 
-                if not game_over and not paused and not show_death_screen:
-                    if event.key == pygame.K_e:
-                        # E key only triggers spin attack now
-                        player.spin_attack(audio_manager.get_sound('spin_attack'))
-                
-                # Restart anytime with Shift+Enter (kept for convenience)
-                keys = pygame.key.get_pressed()
-                if event.key == pygame.K_RETURN and (keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]):
-                    return "RESTART"
+                    # Handle pause menu input (only if paused)
+                    if paused:
+                        result = pause_menu.handle_input(event)
+                        if result == "CONTINUE":
+                            paused = False
+                            audio_manager.unpause_music()  # Resume music
+                        elif result == "RESTART":
+                            audio_manager.stop_music()  # Stop music before restart
+                            return "RESTART"  # Signal to restart
+                        elif result == "MAIN MENU":
+                            audio_manager.stop_music()  # Stop music before returning to menu
+                            return "MAIN_MENU"  # Return to title screen
+                        continue  # Skip other inputs while paused
 
-            # --- MOUSE EVENT HANDLING ---
-            elif event.type == pygame.MOUSEMOTION or event.type == pygame.MOUSEBUTTONDOWN:
-                # Handle pause menu mouse input (only if paused)
-                if paused:
-                    result = pause_menu.handle_input(event)
-                    if result == "CONTINUE":
-                        paused = False
-                        audio_manager.unpause_music()  # Resume music
-                    elif result == "RESTART":
-                        audio_manager.stop_music()  # Stop music before restart
-                        return "RESTART"  # Signal to restart
-                    elif result == "MAIN MENU":
-                        audio_manager.stop_music()  # Stop music before returning to menu
-                        return "MAIN_MENU"  # Return to title screen
+                    # Handle death menu input (only if showing death screen)
+                    if show_death_screen:
+                        result = death_menu.handle_input(event)
+                        if result == "RESTART":
+                            audio_manager.stop_music()  # Stop music before restart
+                            return "RESTART"  # Signal to restart
+                        elif result == "MAIN MENU":
+                            audio_manager.stop_music()  # Stop music before returning to menu
+                            return "MAIN_MENU"  # Return to title screen
+                        continue  # Skip other inputs on death screen
 
-                # Handle death menu mouse input (only if showing death screen)
-                elif show_death_screen:
-                    result = death_menu.handle_input(event)
-                    if result == "RESTART":
-                        audio_manager.stop_music()  # Stop music before restart
-                        return "RESTART"  # Signal to restart
-                    elif result == "MAIN MENU":
-                        audio_manager.stop_music()  # Stop music before returning to menu
-                        return "MAIN_MENU"  # Return to title screen
+                    # Jump (only if not dead, not paused, and not on death screen)
+                    if not game_over and not paused and not show_death_screen:
+                        if event.key in (pygame.K_SPACE, pygame.K_UP, pygame.K_w):
+                            player.jump(audio_manager.get_sound('jump'),
+                                       audio_manager.get_sound('double_jump'))
 
-                # Handle cutscene click to continue
-                elif cutscene_active and event.type == pygame.MOUSEBUTTONDOWN:
-                    # Check if there's a next level
-                    next_level = progression.current_level + 1
-                    if next_level in LevelManager.LEVELS:
-                        # There's a next level - advance to it
-                        progression.advance_to_next_level()
-                        return "NEXT_LEVEL"  # Signal to load next level
-                    else:
-                        # No more levels - return to title screen
-                        return "LEVEL_COMPLETE"  # Return to title screen
+                    if not game_over and not paused and not show_death_screen:
+                        if event.key == pygame.K_e:
+                            # E key only triggers spin attack now
+                            player.spin_attack(audio_manager.get_sound('spin_attack'))
+
+                    # Restart anytime with Shift+Enter (kept for convenience)
+                    keys = pygame.key.get_pressed()
+                    if event.key == pygame.K_RETURN and (keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]):
+                        return "RESTART"
+
+                # --- MOUSE EVENT HANDLING ---
+                elif event.type == pygame.MOUSEMOTION or event.type == pygame.MOUSEBUTTONDOWN:
+                    # Handle pause menu mouse input (only if paused)
+                    if paused:
+                        result = pause_menu.handle_input(event)
+                        if result == "CONTINUE":
+                            paused = False
+                            audio_manager.unpause_music()  # Resume music
+                        elif result == "RESTART":
+                            audio_manager.stop_music()  # Stop music before restart
+                            return "RESTART"  # Signal to restart
+                        elif result == "MAIN MENU":
+                            audio_manager.stop_music()  # Stop music before returning to menu
+                            return "MAIN_MENU"  # Return to title screen
+
+                    # Handle death menu mouse input (only if showing death screen)
+                    elif show_death_screen:
+                        result = death_menu.handle_input(event)
+                        if result == "RESTART":
+                            audio_manager.stop_music()  # Stop music before restart
+                            return "RESTART"  # Signal to restart
+                        elif result == "MAIN MENU":
+                            audio_manager.stop_music()  # Stop music before returning to menu
+                            return "MAIN_MENU"  # Return to title screen
 
         # Check if player is dead
         if player.health <= 0 and not game_over:
@@ -264,7 +256,8 @@ def main(progression):
                         username=current_username,
                         level_num=progression.current_level,
                         time_taken=level_time,
-                        coins_collected=coins_collected
+                        coins_collected=coins_collected,
+                        difficulty=progression.difficulty
                     )
 
                     # Save progress to disk
@@ -305,18 +298,92 @@ def main(progression):
             if SHOW_PLATFORMS:  # Only collide with platforms if they're enabled
                 player.on_ground = collision.check_platform_collision_player(player, platforms)
             
+            # --- PRE-UPDATE ENEMY EDGE DETECTION ---
+            # ONLY stop enemies at GROUND-LEVEL edges (holes in the ground)
+            if SHOW_ENEMIES:
+                all_walkable = platforms  # Enemies pass through hazards, only collide with platforms
+
+                for enemy in enemies:
+                    # Skip if enemy is dead or doesn't have direction
+                    if getattr(enemy, 'is_dead', False) or not hasattr(enemy, 'direction'):
+                        continue
+
+                    # Reset edge flag
+                    enemy.at_platform_edge = False
+
+                    # Find the platform the enemy is currently standing on
+                    current_platform = None
+                    tolerance = 10
+
+                    for platform in all_walkable:
+                        if (enemy.hitbox.bottom >= platform.top - tolerance and
+                            enemy.hitbox.bottom <= platform.top + tolerance and
+                            enemy.hitbox.right > platform.left and
+                            enemy.hitbox.left < platform.right):
+                            current_platform = platform
+                            break
+
+                    if current_platform:
+                        # Only apply edge detection if enemy is on a GROUND platform
+                        # Ground platforms are typically at Y=400 (±30 pixels tolerance)
+                        is_ground_platform = abs(current_platform.top - 400) <= 30
+
+                        if is_ground_platform:
+                            # Check ahead in the direction the enemy will move
+                            look_ahead = enemy.hitbox.width // 2  # Look ahead half the enemy's width
+
+                            if enemy.direction == -1:  # Moving left
+                                # Check if we're at or past the left edge
+                                if enemy.hitbox.left - look_ahead <= current_platform.left:
+                                    enemy.direction = 1
+                                    enemy.facing_right = True
+                                    enemy.at_platform_edge = True
+                            elif enemy.direction == 1:  # Moving right
+                                # Check if we're at or past the right edge
+                                if enemy.hitbox.right + look_ahead >= current_platform.right:
+                                    enemy.direction = -1
+                                    enemy.facing_right = False
+                                    enemy.at_platform_edge = True
+
+                            # SPECIAL: Spiked Slimes should avoid walking onto hazards
+                            from enemies.spiked_slime import SpikedSlime
+                            if isinstance(enemy, SpikedSlime) and SHOW_HAZARDS:
+                                # Check if there's a hazard ahead
+                                hazard_check_distance = 40
+
+                                for hazard in hazards:
+                                    # Check if hazard is ahead in movement direction
+                                    if enemy.direction == -1:  # Moving left
+                                        if (hazard.right >= enemy.hitbox.left - hazard_check_distance and
+                                            hazard.left < enemy.hitbox.left and
+                                            abs(hazard.top - enemy.hitbox.bottom) < 50):
+                                            # Hazard ahead! Turn around
+                                            enemy.direction = 1
+                                            enemy.facing_right = True
+                                            enemy.at_platform_edge = True
+                                            break
+                                    elif enemy.direction == 1:  # Moving right
+                                        if (hazard.left <= enemy.hitbox.right + hazard_check_distance and
+                                            hazard.right > enemy.hitbox.right and
+                                            abs(hazard.top - enemy.hitbox.bottom) < 50):
+                                            # Hazard ahead! Turn around
+                                            enemy.direction = -1
+                                            enemy.facing_right = False
+                                            enemy.at_platform_edge = True
+                                            break
+
             # Update enemies (they add projectiles to the group)
             if SHOW_ENEMIES:  # Only update enemies if they're enabled
                 for enemy in enemies:
                     enemy.update(player=player, projectile_group=projectiles)
-            
+
             # --- ENEMY PLATFORM COLLISION ---
             if SHOW_ENEMIES:  # Only handle enemy collisions if they're enabled
                 for enemy in enemies:
                     # Skip if enemy is dead
                     if getattr(enemy, 'is_dead', False):
                         continue
-                    
+
                     # Apply gravity if enemy has it
                     if hasattr(enemy, 'vel_y'):
                         enemy.vel_y += enemy.gravity
@@ -332,8 +399,8 @@ def main(progression):
                         # Enemy death sounds are handled by the enemy objects themselves
                         continue  # Skip rest of processing for this enemy
 
-                    # Check collision with all platforms AND hazards (enemies can walk on hazards)
-                    all_walkable = platforms + hazards if SHOW_HAZARDS else platforms
+                    # Check collision with platforms only (enemies pass through hazards)
+                    all_walkable = platforms
                     enemy_on_ground = collision.check_platform_collision_enemy(enemy, all_walkable)
 
                     # Check if enemy is at patrol edge - make them turn around
@@ -583,19 +650,71 @@ def main(progression):
             # Keep updating NPC animation during cutscene (if exists)
             if goal_npc:
                 goal_npc.update()
-            
-            # Wait for player to press Enter to continue
-            keys = pygame.key.get_pressed()
-            if keys[pygame.K_RETURN]:
-                # Check if there's a next level
-                next_level = progression.current_level + 1
-                if next_level in LevelManager.LEVELS:
-                    # There's a next level - advance to it
-                    progression.advance_to_next_level()
-                    return "NEXT_LEVEL"  # Signal to load next level
-                else:
-                    # No more levels - return to title screen
-                    return "LEVEL_COMPLETE"  # Return to title screen
+
+            # Pre-render to get button rectangles (needed for mouse clicks)
+            temp_surface = pygame.Surface((S.WINDOW_WIDTH, S.WINDOW_HEIGHT))
+            continue_rect, menu_rect = draw_level_complete_screen(
+                temp_surface,
+                progression.current_level,
+                coins_collected,
+                level_time,
+                progression.username,
+                cutscene_selected_button
+            )
+
+            # Check mouse hover to update button selection
+            mouse_pos = pygame.mouse.get_pos()
+            scaled_mouse_x = int(mouse_pos[0] / S.DISPLAY_SCALE)
+            scaled_mouse_y = int(mouse_pos[1] / S.DISPLAY_SCALE)
+            scaled_mouse_pos = (scaled_mouse_x, scaled_mouse_y)
+
+            if continue_rect.collidepoint(scaled_mouse_pos):
+                cutscene_selected_button = "continue"
+            elif menu_rect.collidepoint(scaled_mouse_pos):
+                cutscene_selected_button = "menu"
+
+            # Handle cutscene button navigation and selection
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return "QUIT"
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
+                        # Toggle between buttons
+                        old_button = cutscene_selected_button
+                        cutscene_selected_button = "menu" if cutscene_selected_button == "continue" else "continue"
+                        print(f"Arrow key pressed: {old_button} -> {cutscene_selected_button}")
+                    elif event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
+                        # Activate selected button
+                        if cutscene_selected_button == "continue":
+                            # Check if there's a next level
+                            next_level = progression.current_level + 1
+                            if next_level in LevelManager.LEVELS:
+                                # There's a next level - advance to it
+                                progression.advance_to_next_level()
+                                return "NEXT_LEVEL"  # Signal to load next level
+                            else:
+                                # No more levels - return to title screen
+                                return "LEVEL_COMPLETE"  # Return to title screen
+                        else:  # menu button
+                            return "MENU"  # Return to main menu
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    # Mouse click - detect which button was clicked
+                    mouse_pos = pygame.mouse.get_pos()
+                    scaled_mouse_x = int(mouse_pos[0] / S.DISPLAY_SCALE)
+                    scaled_mouse_y = int(mouse_pos[1] / S.DISPLAY_SCALE)
+                    scaled_mouse_pos = (scaled_mouse_x, scaled_mouse_y)
+
+                    if continue_rect.collidepoint(scaled_mouse_pos):
+                        # Clicked continue button
+                        next_level = progression.current_level + 1
+                        if next_level in LevelManager.LEVELS:
+                            progression.advance_to_next_level()
+                            return "NEXT_LEVEL"
+                        else:
+                            return "LEVEL_COMPLETE"
+                    elif menu_rect.collidepoint(scaled_mouse_pos):
+                        # Clicked menu button
+                        return "MENU"
         elif game_over:
             # Still update player animation even when dead to show death animation
             # But don't pass real keys - pass empty dict to prevent movement
@@ -636,13 +755,13 @@ def main(progression):
                         pygame.draw.rect(screen, (255, 255, 0), draw_rect, 2)
             elif world_name == "1-2":
                 # LEVEL 2: Snowy ground + wooden platforms
-                # Draw ground first (first platform in list)
-                if len(platforms) > 0:
-                    draw_snowy_ground(screen, platforms[0], camera_x)
-
-                # Draw all other platforms as wooden
-                for platform in platforms[1:]:
-                    draw_wooden_platform(screen, platform, camera_x)
+                # Level 2 has 6 ground segments at Y=400, then platforms above
+                # Draw first 6 platforms as snowy ground (the main floor)
+                for i, platform in enumerate(platforms):
+                    if i < 6:  # First 6 are ground segments
+                        draw_snowy_ground(screen, platform, camera_x)
+                    else:  # Rest are wooden platforms
+                        draw_wooden_platform(screen, platform, camera_x)
 
                     if SHOW_HITBOXES:
                         draw_rect = pygame.Rect(platform.x - camera_x, platform.y, platform.width, platform.height)
@@ -902,7 +1021,15 @@ def main(progression):
         
         # --- LEVEL COMPLETE CUTSCENE ---
         if cutscene_active:
-            draw_level_complete_screen(screen, progression.current_level, coins_collected, level_time)
+            # Draw the cutscene (button rects already calculated earlier)
+            draw_level_complete_screen(
+                screen,
+                progression.current_level,
+                coins_collected,
+                level_time,
+                progression.username,
+                cutscene_selected_button
+            )
         
         # --- PAUSE MENU OVERLAY ---
         if paused:
@@ -944,9 +1071,10 @@ if __name__ == "__main__":
         else:
             print("ℹ️ No save file found.")
     else:
-        # Debug mode: unlock all levels
-        progression.max_level_reached = len(LevelManager.LEVELS)
-        print(f"🔓 DEBUG: All {len(LevelManager.LEVELS)} levels unlocked")
+        # Debug mode: unlock all levels (excluding test levels like 99)
+        regular_levels = [lvl for lvl in LevelManager.LEVELS.keys() if lvl < 90]
+        progression.max_level_reached = max(regular_levels) if regular_levels else 1
+        print(f"🔓 DEBUG: All {len(regular_levels)} levels unlocked")
         # Abilities are NOT unlocked - player must earn them by completing levels
 
     # If no username, prompt for one
@@ -1014,9 +1142,9 @@ if __name__ == "__main__":
             elif game_result == "LEVEL_COMPLETE":
                 # Final level completed or player chose to return to menu
                 playing = False
-            
-            elif game_result == "MAIN_MENU":
-                # Player chose to return to main menu
+
+            elif game_result == "MENU" or game_result == "MAIN_MENU":
+                # Player chose to return to main menu from level complete screen
                 playing = False
             
             elif game_result == "RESTART":

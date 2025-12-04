@@ -38,6 +38,9 @@ class ScoreboardScreen:
         self.screen = screen
         self.current_level = 1
         self.max_levels = len(LevelManager.LEVELS)
+        self.difficulties = ["All", "Easy", "Medium", "Hard"]
+        self.current_difficulty = 0  # Index into difficulties list (0 = "All")
+        self.scroll_offset = 0  # Track scroll position for viewing more than 10 scores
 
         # Wintery color palette
         self.bg_gradient_top = (15, 30, 60)
@@ -104,6 +107,43 @@ class ScoreboardScreen:
 
         return None
 
+    def get_difficulty_arrow_at_pos(self, pos):
+        """Get which difficulty arrow (if any) is at the given mouse position"""
+        screen_width = self.screen.get_width()
+        diff_box_width = 300
+        diff_box_height = 50
+        diff_box_x = screen_width - diff_box_width - 40
+        diff_box_y = 90
+
+        arrow_size = 30
+
+        # Up arrow region
+        up_arrow_rect = pygame.Rect(
+            diff_box_x + (diff_box_width - arrow_size) // 2,
+            diff_box_y - arrow_size - 5,
+            arrow_size,
+            arrow_size
+        )
+        if up_arrow_rect.collidepoint(pos):
+            return "UP"
+
+        # Down arrow region
+        down_arrow_rect = pygame.Rect(
+            diff_box_x + (diff_box_width - arrow_size) // 2,
+            diff_box_y + diff_box_height + 5,
+            arrow_size,
+            arrow_size
+        )
+        if down_arrow_rect.collidepoint(pos):
+            return "DOWN"
+
+        # Check if clicking inside the difficulty box itself (cycle through on click)
+        diff_box_rect = pygame.Rect(diff_box_x, diff_box_y, diff_box_width, diff_box_height)
+        if diff_box_rect.collidepoint(pos):
+            return "CYCLE"
+
+        return None
+
     def handle_event(self, event):
         """Handle keyboard and mouse input"""
         if event.type == pygame.KEYDOWN:
@@ -111,18 +151,64 @@ class ScoreboardScreen:
                 return True
             elif event.key == pygame.K_LEFT:
                 self.current_level = max(1, self.current_level - 1)
+                self.scroll_offset = 0  # Reset scroll when changing levels
             elif event.key == pygame.K_RIGHT:
                 self.current_level = min(self.max_levels, self.current_level + 1)
+                self.scroll_offset = 0  # Reset scroll when changing levels
+            elif event.key in (pygame.K_UP, pygame.K_w):
+                self.current_difficulty = (self.current_difficulty - 1) % len(self.difficulties)
+                self.scroll_offset = 0  # Reset scroll when changing difficulty
+            elif event.key in (pygame.K_DOWN, pygame.K_s):
+                self.current_difficulty = (self.current_difficulty + 1) % len(self.difficulties)
+                self.scroll_offset = 0  # Reset scroll when changing difficulty
+        elif event.type == pygame.MOUSEWHEEL:
+            # Handle trackpad/mouse wheel scrolling (Mac/modern mice)
+            mouse_pos = pygame.mouse.get_pos()
+            is_hovering = self.is_hovering_scoreboard(mouse_pos)
+            if is_hovering:
+                # event.y > 0 is scroll up, event.y < 0 is scroll down
+                if event.y > 0:  # Scroll up
+                    self.scroll_offset = max(0, self.scroll_offset - 1)
+                elif event.y < 0:  # Scroll down
+                    self.scroll_offset += 1
+                return False  # Don't exit to main menu
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_pos = pygame.mouse.get_pos()
+
+            # Handle old-style mouse wheel scrolling (Linux/older mice)
+            if event.button == 4:  # Scroll up
+                if self.is_hovering_scoreboard(mouse_pos):
+                    self.scroll_offset = max(0, self.scroll_offset - 1)
+                    return False  # Don't exit to main menu
+            elif event.button == 5:  # Scroll down
+                if self.is_hovering_scoreboard(mouse_pos):
+                    self.scroll_offset += 1
+                    return False  # Don't exit to main menu
+
             arrow = self.get_arrow_at_pos(mouse_pos)
             if arrow == "LEFT":
                 self.current_level = max(1, self.current_level - 1)
+                self.scroll_offset = 0  # Reset scroll when changing levels
             elif arrow == "RIGHT":
                 self.current_level = min(self.max_levels, self.current_level + 1)
+                self.scroll_offset = 0  # Reset scroll when changing levels
             else:
-                # Click anywhere else to go back
-                return True
+                # Check if clicking on difficulty filter
+                diff_arrow = self.get_difficulty_arrow_at_pos(mouse_pos)
+                if diff_arrow == "UP":
+                    self.current_difficulty = (self.current_difficulty - 1) % len(self.difficulties)
+                    self.scroll_offset = 0  # Reset scroll when changing difficulty
+                elif diff_arrow == "DOWN":
+                    self.current_difficulty = (self.current_difficulty + 1) % len(self.difficulties)
+                    self.scroll_offset = 0  # Reset scroll when changing difficulty
+                elif diff_arrow == "CYCLE":
+                    # Clicking the box itself cycles through difficulties
+                    self.current_difficulty = (self.current_difficulty + 1) % len(self.difficulties)
+                    self.scroll_offset = 0  # Reset scroll when changing difficulty
+                else:
+                    # Click anywhere else to go back (but not if scrolling over scoreboard)
+                    if not self.is_hovering_scoreboard(mouse_pos):
+                        return True
         return False
 
     def format_time(self, frames):
@@ -193,10 +279,40 @@ class ScoreboardScreen:
         alpha_surface.set_alpha(150)
         self.screen.blit(alpha_surface, (x - size, y - size))
 
+    def is_hovering_difficulty_box(self, pos):
+        """Check if mouse is hovering over the difficulty box"""
+        screen_width = self.screen.get_width()
+        diff_box_width = 300
+        diff_box_height = 50
+        diff_box_x = screen_width - diff_box_width - 40
+        diff_box_y = 90
+        diff_box_rect = pygame.Rect(diff_box_x, diff_box_y, diff_box_width, diff_box_height)
+        return diff_box_rect.collidepoint(pos)
+
+    def is_hovering_scoreboard(self, pos):
+        """Check if mouse is hovering over the scoreboard area"""
+        # Mouse position is in display coordinates, need to convert to render coordinates
+        from utils import settings as S
+        scaled_x = int(pos[0] / S.DISPLAY_SCALE) if hasattr(S, 'DISPLAY_SCALE') else pos[0]
+        scaled_y = int(pos[1] / S.DISPLAY_SCALE) if hasattr(S, 'DISPLAY_SCALE') else pos[1]
+        scaled_pos = (scaled_x, scaled_y)
+
+        screen_width = self.screen.get_width()
+        scores_box_width = 650
+        scores_box_height = 380
+        scores_box_x = (screen_width - scores_box_width) // 2
+        scores_box_y = 160
+        scores_box_rect = pygame.Rect(scores_box_x, scores_box_y, scores_box_width, scores_box_height)
+        return scores_box_rect.collidepoint(scaled_pos)
+
     def draw(self):
         """Draw the scoreboard screen with winter theme"""
         screen_width = self.screen.get_width()
         screen_height = self.screen.get_height()
+
+        # Check if hovering over difficulty box
+        mouse_pos = pygame.mouse.get_pos()
+        is_hovering = self.is_hovering_difficulty_box(mouse_pos)
 
         # Update and draw snowflakes
         for snowflake in self.snowflakes:
@@ -250,8 +366,64 @@ class ScoreboardScreen:
             right_rect = right_arrow.get_rect(midleft=(level_box_x + level_box_width - 30, level_box_y + level_box_height // 2))
             self.screen.blit(right_arrow, right_rect)
 
-        # Get leaderboard
+        # Draw difficulty filter box (top right)
+        diff_box_width = 300
+        diff_box_height = 50
+        diff_box_x = screen_width - diff_box_width - 40
+        diff_box_y = 90
+
+        # Use brighter alpha if hovering to indicate clickability
+        box_alpha = 200 if is_hovering else 160
+        self.draw_frosted_box(diff_box_x, diff_box_y, diff_box_width, diff_box_height, box_alpha)
+
+        # Difficulty filter text
+        label_color = (10, 30, 70) if is_hovering else (20, 40, 80)
+        diff_label = self.score_font.render("DIFFICULTY:", True, label_color)
+        diff_label_rect = diff_label.get_rect(center=(diff_box_x + diff_box_width // 2, diff_box_y + 18))
+        self.screen.blit(diff_label, diff_label_rect)
+
+        value_color = (10, 30, 70) if is_hovering else (20, 40, 80)
+        current_diff_text = self.difficulties[self.current_difficulty]
+        diff_value = self.level_font.render(current_diff_text, True, value_color)
+        diff_value_rect = diff_value.get_rect(center=(diff_box_x + diff_box_width // 2, diff_box_y + 35))
+        self.screen.blit(diff_value, diff_value_rect)
+
+        # Add click hint when hovering
+        if is_hovering:
+            hint_text = self.score_font.render("(click to cycle)", True, (80, 120, 160))
+            hint_rect = hint_text.get_rect(center=(diff_box_x + diff_box_width // 2, diff_box_y + diff_box_height + 35))
+            self.screen.blit(hint_text, hint_rect)
+
+        # Up/Down arrows for difficulty
+        arrow_color = (20, 40, 80)
+        arrow_size = 15
+        center_x = diff_box_x + diff_box_width // 2
+
+        # Up arrow
+        up_arrow_y = diff_box_y - arrow_size - 10
+        up_arrow_points = [
+            (center_x, up_arrow_y),
+            (center_x - arrow_size, up_arrow_y + arrow_size),
+            (center_x + arrow_size, up_arrow_y + arrow_size)
+        ]
+        pygame.draw.polygon(self.screen, arrow_color, up_arrow_points)
+
+        # Down arrow
+        down_arrow_y = diff_box_y + diff_box_height + 10
+        down_arrow_points = [
+            (center_x, down_arrow_y + arrow_size),
+            (center_x - arrow_size, down_arrow_y),
+            (center_x + arrow_size, down_arrow_y)
+        ]
+        pygame.draw.polygon(self.screen, arrow_color, down_arrow_points)
+
+        # Get leaderboard and filter by difficulty
         leaderboard = SaveSystem.get_leaderboard(self.current_level)
+
+        # Filter scores by difficulty if not "All"
+        if self.current_difficulty > 0:  # 0 is "All"
+            selected_difficulty = self.difficulties[self.current_difficulty]
+            leaderboard = [score for score in leaderboard if score.get('difficulty', 'Medium') == selected_difficulty]
 
         # Draw scores in frosted box
         scores_box_width = 650
@@ -264,10 +436,11 @@ class ScoreboardScreen:
         # Column headers
         header_y = scores_box_y + 20
         headers = [
-            ("RANK", 50),
-            ("NAME", 140),
-            ("TIME", 370),
-            ("COINS", 520)
+            ("RANK", 30),
+            ("NAME", 100),
+            ("TIME", 280),
+            ("COINS", 420),
+            ("DIFF", 540)
         ]
 
         for text, x_offset in headers:
@@ -282,46 +455,70 @@ class ScoreboardScreen:
         # Draw scores or empty message
         start_y = header_y + 50
         row_height = 32
+        max_visible_rows = 10
 
         if not leaderboard:
             no_scores = self.score_font.render("NO SCORES YET! BE THE FIRST!", True, self.snow_white)
             no_scores_rect = no_scores.get_rect(center=(screen_width // 2, start_y + 100))
             self.screen.blit(no_scores, no_scores_rect)
         else:
-            for i, score in enumerate(leaderboard[:10]):
-                y = start_y + (i * row_height)
+            # Clamp scroll offset to valid range
+            max_scroll = max(0, len(leaderboard) - max_visible_rows)
+            self.scroll_offset = max(0, min(self.scroll_offset, max_scroll))
 
-                # Rank color
-                if i == 0:
+            # Determine which scores to show based on scroll offset
+            visible_scores = leaderboard[self.scroll_offset:self.scroll_offset + max_visible_rows]
+
+            for display_index, score in enumerate(visible_scores):
+                actual_rank = self.scroll_offset + display_index  # Actual rank in full leaderboard
+                y = start_y + (display_index * row_height)
+
+                # Rank color based on actual rank
+                if actual_rank == 0:
                     rank_color = self.gold_color
-                elif i == 1:
+                elif actual_rank == 1:
                     rank_color = self.silver_color
-                elif i == 2:
+                elif actual_rank == 2:
                     rank_color = self.bronze_color
                 else:
                     rank_color = (20, 40, 80)
 
-                # Draw rank
-                rank_text = self.score_font.render(f"#{i+1}", True, rank_color)
-                self.screen.blit(rank_text, (scores_box_x + 50, y))
+                # Draw rank (using actual rank, not display index)
+                rank_text = self.score_font.render(f"#{actual_rank + 1}", True, rank_color)
+                self.screen.blit(rank_text, (scores_box_x + 30, y))
 
                 # Draw username
-                username_text = self.score_font.render(score['username'][:15], True, (20, 40, 80))
-                self.screen.blit(username_text, (scores_box_x + 140, y))
+                username_text = self.score_font.render(score['username'][:12], True, (20, 40, 80))
+                self.screen.blit(username_text, (scores_box_x + 100, y))
 
                 # Draw time
                 time_str = self.format_time(score['time'])
                 time_text = self.score_font.render(time_str, True, (20, 40, 80))
-                self.screen.blit(time_text, (scores_box_x + 370, y))
+                self.screen.blit(time_text, (scores_box_x + 280, y))
 
                 # Draw coins
                 coins_text = self.score_font.render(str(score['coins']), True, (20, 40, 80))
-                self.screen.blit(coins_text, (scores_box_x + 520, y))
+                self.screen.blit(coins_text, (scores_box_x + 420, y))
+
+                # Draw difficulty (default to "Medium" for old scores)
+                difficulty = score.get('difficulty', 'Medium')
+                # Shorten difficulty names for display
+                diff_short = difficulty[0]  # E, M, or H
+                diff_text = self.score_font.render(diff_short, True, (20, 40, 80))
+                self.screen.blit(diff_text, (scores_box_x + 540, y))
+
+            # Draw scroll indicator below the scoreboard box if there are more scores
+            if len(leaderboard) > max_visible_rows:
+                indicator_y = scores_box_y + scores_box_height + 25  # 25 pixels below the box
+                indicator_text = f"Showing {self.scroll_offset + 1}-{min(self.scroll_offset + max_visible_rows, len(leaderboard))} of {len(leaderboard)}"
+                indicator_surface = self.score_font.render(indicator_text, True, (80, 120, 160))
+                indicator_rect = indicator_surface.get_rect(center=(screen_width // 2, indicator_y))
+                self.screen.blit(indicator_surface, indicator_rect)
 
         # Draw hints at bottom
         hint_y = screen_height - 40
         hints = [
-            "< / > : CHANGE LEVEL     ESC / ENTER : BACK"
+            "< / > : LEVEL     UP / DOWN : DIFFICULTY     SCROLL : VIEW MORE     ESC / ENTER : BACK"
         ]
 
         for hint in hints:

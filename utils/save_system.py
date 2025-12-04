@@ -159,7 +159,7 @@ class SaveSystem:
             return None
 
     @staticmethod
-    def submit_score(username, level_num, time_taken, coins_collected):
+    def submit_score(username, level_num, time_taken, coins_collected, difficulty="Medium"):
         """
         Submit a score to the scoreboard
 
@@ -168,6 +168,7 @@ class SaveSystem:
             level_num: Level number
             time_taken: Time taken in frames
             coins_collected: Number of coins collected
+            difficulty: Difficulty level (Easy/Medium/Hard, defaults to Medium)
 
         Returns:
             bool: True if score was submitted successfully
@@ -188,6 +189,7 @@ class SaveSystem:
                 'username': username,
                 'time': time_taken,
                 'coins': coins_collected,
+                'difficulty': difficulty,
                 'timestamp': __import__('time').time()
             }
 
@@ -197,8 +199,8 @@ class SaveSystem:
             # Sort by time (fastest first), then by coins (most first)
             scoreboard[level_key].sort(key=lambda x: (x['time'], -x['coins']))
 
-            # Keep only top 10 scores per level
-            scoreboard[level_key] = scoreboard[level_key][:10]
+            # Keep only top 100 scores per level (allows scrolling through more scores)
+            scoreboard[level_key] = scoreboard[level_key][:100]
 
             # Save scoreboard
             with open(SaveSystem.SCOREBOARD_FILE, 'w') as f:
