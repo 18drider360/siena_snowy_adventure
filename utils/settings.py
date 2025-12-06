@@ -12,7 +12,7 @@ FPS = 60
 TITLE = "Siena's Snowy Adventure"
 
 # Audio Settings
-MASTER_AUDIO_ENABLED = True  # Set to False to disable ALL audio (music + sound effects)
+MASTER_AUDIO_ENABLED = False  # Set to False to disable ALL audio (music + sound effects)
 
 # Colors (R,G,B)
 WHITE = (255, 255, 255)

@@ -7,76 +7,252 @@ import pygame
 from utils import settings as S
 
 
-def draw_level_complete_screen(screen, level_num, coins, time):
-    """Draw the level completion cutscene as a dialogue with the penguin NPC"""
+def draw_level_complete_screen(screen, level_num, coins, time, username="Player", selected_button="continue"):
+    """Draw the level completion cutscene with winter theme
+
+    Args:
+        selected_button: "continue" or "menu" - which button is selected
+
+    Returns:
+        tuple: (continue_rect, menu_rect) - button rectangles for click detection
+    """
+    import math
+
     # Load font
     try:
-        font_large = pygame.font.Font("assets/fonts/PressStart2P-Regular.ttf", 24)
-        font_small = pygame.font.Font("assets/fonts/PressStart2P-Regular.ttf", 16)
+        font_title = pygame.font.Font("assets/fonts/PressStart2P-Regular.ttf", 28)
+        font_large = pygame.font.Font("assets/fonts/PressStart2P-Regular.ttf", 20)
+        font_medium = pygame.font.Font("assets/fonts/PressStart2P-Regular.ttf", 16)
+        font_small = pygame.font.Font("assets/fonts/PressStart2P-Regular.ttf", 14)
     except:
-        font_large = pygame.font.Font(None, 48)
-        font_small = pygame.font.Font(None, 32)
-    
+        font_title = pygame.font.Font(None, 56)
+        font_large = pygame.font.Font(None, 40)
+        font_medium = pygame.font.Font(None, 32)
+        font_small = pygame.font.Font(None, 28)
+
     # Calculate time in seconds
     time_seconds = time // 60
-    
-    # Draw dialogue box (like old RPG games)
-    dialogue_box = pygame.Rect(100, 350, S.WINDOW_WIDTH - 200, 200)
-    
-    # Draw box shadow
-    shadow_box = dialogue_box.copy()
-    shadow_box.x += 4
-    shadow_box.y += 4
-    pygame.draw.rect(screen, (0, 0, 0), shadow_box)
-    
-    # Draw main box with border
-    pygame.draw.rect(screen, (255, 255, 255), dialogue_box)
-    pygame.draw.rect(screen, (0, 0, 0), dialogue_box, 4)
-    
-    # Inner padding
-    text_area = dialogue_box.inflate(-40, -40)
-    
-    # NPC Name tag (top-left corner of box)
-    name_tag = pygame.Rect(dialogue_box.x + 20, dialogue_box.y - 15, 150, 30)
-    pygame.draw.rect(screen, (255, 215, 0), name_tag)  # Gold
-    pygame.draw.rect(screen, (0, 0, 0), name_tag, 3)
-    
-    name_text = font_small.render("PEDRO", True, (0, 0, 0))
+
+    # Winter colors
+    frost_blue = (200, 220, 255)
+    ice_white = (240, 250, 255)
+    snow_shadow = (180, 200, 230)
+    gold = (255, 215, 0)
+    text_dark = (40, 60, 90)
+
+    # Draw frosted dialogue box with winter theme
+    box_width = 650
+    box_height = 380
+    dialogue_box = pygame.Rect((S.WINDOW_WIDTH - box_width) // 2, 150, box_width, box_height)
+
+    # Draw soft glow behind box
+    glow_surface = pygame.Surface((dialogue_box.width + 40, dialogue_box.height + 40), pygame.SRCALPHA)
+    glow_color = (100, 180, 255, 60)
+    for i in range(20, 0, -2):
+        alpha = int(60 * (i / 20))
+        color = (100, 180, 255, alpha)
+        glow_rect = pygame.Rect(20 - i, 20 - i, dialogue_box.width + i * 2, dialogue_box.height + i * 2)
+        pygame.draw.rect(glow_surface, color, glow_rect, border_radius=15)
+    screen.blit(glow_surface, (dialogue_box.x - 20, dialogue_box.y - 20))
+
+    # Create frosted glass effect
+    frost_surface = pygame.Surface((dialogue_box.width, dialogue_box.height), pygame.SRCALPHA)
+    frost_surface.fill((230, 240, 255, 220))
+    screen.blit(frost_surface, dialogue_box.topleft)
+
+    # Draw decorative ice border
+    border_width = 6
+    pygame.draw.rect(screen, ice_white, dialogue_box, border_width, border_radius=12)
+    pygame.draw.rect(screen, frost_blue, dialogue_box, 3, border_radius=12)
+
+    # Draw animated snowflakes around the box
+    current_time = pygame.time.get_ticks() / 1000.0
+    for i in range(12):
+        angle = (current_time * 0.5 + i * (360 / 12)) % 360
+        rad = math.radians(angle)
+        radius = 220
+        x = dialogue_box.centerx + int(math.cos(rad) * radius)
+        y = dialogue_box.centery + int(math.sin(rad) * radius)
+
+        # Draw small snowflake
+        size = 12
+        snowflake_color = (200, 220, 255, 180)
+        # Create snowflake on surface with alpha
+        snowflake_surf = pygame.Surface((size * 2, size * 2), pygame.SRCALPHA)
+        pygame.draw.line(snowflake_surf, snowflake_color, (size, 0), (size, size * 2), 2)
+        pygame.draw.line(snowflake_surf, snowflake_color, (0, size), (size * 2, size), 2)
+        pygame.draw.line(snowflake_surf, snowflake_color, (3, 3), (size * 2 - 3, size * 2 - 3), 2)
+        pygame.draw.line(snowflake_surf, snowflake_color, (size * 2 - 3, 3), (3, size * 2 - 3), 2)
+        screen.blit(snowflake_surf, (x - size, y - size))
+
+    # Draw Pedro the Penguin above the dialogue box
+    penguin_x = dialogue_box.centerx - 20
+    penguin_y = dialogue_box.y - 60  # Moved down 30 pixels total
+    scale = 0.4  # Even smaller penguin
+
+    body_width = int(60 * scale)
+    body_height = int(80 * scale)
+    head_radius = int(25 * scale)
+
+    # Body (black oval)
+    pygame.draw.ellipse(screen, (40, 40, 40),
+                      (penguin_x, penguin_y, body_width, body_height))
+
+    # Belly (white)
+    pygame.draw.ellipse(screen, (255, 255, 255),
+                      (penguin_x + int(10 * scale), penguin_y + int(15 * scale),
+                       int(40 * scale), int(50 * scale)))
+
+    # Head (black circle)
+    pygame.draw.circle(screen, (40, 40, 40),
+                     (penguin_x + body_width // 2, penguin_y - int(10 * scale)),
+                     head_radius)
+
+    # Eyes (white)
+    pygame.draw.circle(screen, (255, 255, 255),
+                     (penguin_x + int(22 * scale), penguin_y - int(12 * scale)),
+                     int(6 * scale))
+    pygame.draw.circle(screen, (255, 255, 255),
+                     (penguin_x + int(38 * scale), penguin_y - int(12 * scale)),
+                     int(6 * scale))
+
+    # Pupils (black)
+    pygame.draw.circle(screen, (0, 0, 0),
+                     (penguin_x + int(24 * scale), penguin_y - int(10 * scale)),
+                     int(3 * scale))
+    pygame.draw.circle(screen, (0, 0, 0),
+                     (penguin_x + int(40 * scale), penguin_y - int(10 * scale)),
+                     int(3 * scale))
+
+    # Beak (orange)
+    beak_points = [
+        (penguin_x + int(30 * scale), penguin_y - int(5 * scale)),
+        (penguin_x + int(35 * scale), penguin_y),
+        (penguin_x + int(30 * scale), penguin_y + int(2 * scale))
+    ]
+    pygame.draw.polygon(screen, (255, 140, 0), beak_points)
+
+    # Feet (orange)
+    pygame.draw.ellipse(screen, (255, 140, 0),
+                      (penguin_x + int(8 * scale), penguin_y + int(75 * scale),
+                       int(20 * scale), int(10 * scale)))
+    pygame.draw.ellipse(screen, (255, 140, 0),
+                      (penguin_x + int(32 * scale), penguin_y + int(75 * scale),
+                       int(20 * scale), int(10 * scale)))
+
+    # NPC Name tag with icy theme (below penguin)
+    name_tag_width = 180
+    name_tag_height = 40
+    name_tag = pygame.Rect(dialogue_box.centerx - name_tag_width // 2, dialogue_box.y - 25, name_tag_width, name_tag_height)
+
+    # Name tag background with gradient effect
+    name_bg = pygame.Surface((name_tag.width, name_tag.height), pygame.SRCALPHA)
+    name_bg.fill((100, 180, 255, 240))
+    screen.blit(name_bg, name_tag.topleft)
+    pygame.draw.rect(screen, ice_white, name_tag, 4, border_radius=8)
+    pygame.draw.rect(screen, gold, name_tag, 2, border_radius=8)
+
+    name_text = font_medium.render("PEDRO", True, ice_white)
     name_rect = name_text.get_rect(center=(name_tag.centerx, name_tag.centery))
+    # Draw text shadow
+    shadow_text = font_medium.render("PEDRO", True, (50, 80, 120))
+    screen.blit(shadow_text, (name_rect.x + 2, name_rect.y + 2))
     screen.blit(name_text, name_rect)
-    
-    # Dialogue text lines
-    y_offset = text_area.y + 10
-    line_spacing = 35
-    
-    # Line 1: Congratulations
-    line1 = font_large.render("Congratulations, Siena!", True, (0, 0, 0))
-    screen.blit(line1, (text_area.x, y_offset))
-    y_offset += line_spacing + 10
-    
-    # Line 2: Level complete
-    line2 = font_small.render(f"You completed Level {level_num}!", True, (0, 0, 0))
-    screen.blit(line2, (text_area.x, y_offset))
-    y_offset += line_spacing
-    
-    # Line 3: Stats intro
-    line3 = font_small.render("Here are your results:", True, (0, 0, 0))
-    screen.blit(line3, (text_area.x, y_offset))
-    y_offset += line_spacing
-    
-    # Line 4: Coins collected
-    line4 = font_small.render(f"  Coins: {coins}", True, (0, 100, 0))
-    screen.blit(line4, (text_area.x, y_offset))
-    y_offset += line_spacing
-    
-    # Line 5: Time
-    line5 = font_small.render(f"  Time: {time_seconds} seconds", True, (0, 100, 0))
-    screen.blit(line5, (text_area.x, y_offset))
-    
-    # Press Enter prompt (bottom-right)
-    prompt_text = font_small.render("Press ENTER >", True, (100, 100, 100))
-    prompt_rect = prompt_text.get_rect(bottomright=(dialogue_box.right - 20, dialogue_box.bottom - 15))
-    screen.blit(prompt_text, prompt_rect)
+
+    # Content area
+    content_y = dialogue_box.y + 50
+
+    # Title with shadow effect
+    title_text = font_title.render("LEVEL COMPLETE!", True, gold)
+    title_shadow = font_title.render("LEVEL COMPLETE!", True, (180, 150, 0))
+    title_rect = title_text.get_rect(center=(dialogue_box.centerx, content_y))
+    screen.blit(title_shadow, (title_rect.x + 3, title_rect.y + 3))
+    screen.blit(title_text, title_rect)
+
+    content_y += 60
+
+    # Congratulations message
+    congrats = font_large.render(f"Great job, {username}!", True, text_dark)
+    congrats_rect = congrats.get_rect(center=(dialogue_box.centerx, content_y))
+    screen.blit(congrats, congrats_rect)
+
+    content_y += 50
+
+    # Stats box with frosted background
+    stats_box = pygame.Rect(dialogue_box.x + 80, content_y, dialogue_box.width - 160, 140)
+    stats_bg = pygame.Surface((stats_box.width, stats_box.height), pygame.SRCALPHA)
+    stats_bg.fill((255, 255, 255, 160))
+    screen.blit(stats_bg, stats_box.topleft)
+    pygame.draw.rect(screen, frost_blue, stats_box, 3, border_radius=8)
+
+    stats_y = stats_box.y + 20
+
+    # Level info
+    level_text = font_medium.render(f"Level {level_num} Complete", True, text_dark)
+    level_rect = level_text.get_rect(center=(stats_box.centerx, stats_y))
+    screen.blit(level_text, level_rect)
+    stats_y += 40
+
+    # Coins with icon color
+    coins_text = font_medium.render(f"Coins: {coins}", True, (220, 160, 0))
+    coins_rect = coins_text.get_rect(center=(stats_box.centerx, stats_y))
+    screen.blit(coins_text, coins_rect)
+    stats_y += 35
+
+    # Time
+    time_text = font_medium.render(f"Time: {time_seconds}s", True, (80, 140, 200))
+    time_rect = time_text.get_rect(center=(stats_box.centerx, stats_y))
+    screen.blit(time_text, time_rect)
+
+    # Draw action buttons at bottom
+    button_y = dialogue_box.bottom - 55
+    button_width = 250
+    button_height = 40
+    button_spacing = 30
+
+    # Continue button (left)
+    continue_rect = pygame.Rect(
+        dialogue_box.centerx - button_width - button_spacing // 2,
+        button_y,
+        button_width,
+        button_height
+    )
+
+    # Main Menu button (right)
+    menu_rect = pygame.Rect(
+        dialogue_box.centerx + button_spacing // 2,
+        button_y,
+        button_width,
+        button_height
+    )
+
+    # Helper function to draw button
+    def draw_button(rect, text, is_selected):
+        # Glow if selected
+        if is_selected:
+            glow_rect = rect.inflate(8, 8)
+            glow_surface = pygame.Surface((glow_rect.width, glow_rect.height), pygame.SRCALPHA)
+            glow_surface.fill((255, 200, 0, 80))
+            screen.blit(glow_surface, glow_rect.topleft)
+
+        # Button background
+        button_color = (100, 180, 255) if is_selected else (80, 120, 180)
+        pygame.draw.rect(screen, button_color, rect, border_radius=8)
+
+        # Button border
+        border_color = (150, 200, 255) if is_selected else (100, 150, 200)
+        pygame.draw.rect(screen, border_color, rect, 3, border_radius=8)
+
+        # Button text
+        text_color = (255, 255, 255)
+        button_text = font_small.render(text, True, text_color)
+        text_rect = button_text.get_rect(center=rect.center)
+        screen.blit(button_text, text_rect)
+
+    draw_button(continue_rect, "CONTINUE", selected_button == "continue")
+    draw_button(menu_rect, "MAIN MENU", selected_button == "menu")
+
+    return (continue_rect, menu_rect)
 
 
 def draw_level_transition_screen(screen, next_level_num):

@@ -264,8 +264,21 @@ class Snowy(pygame.sprite.Sprite):
                         self.attack_cooldown = random.randint(80, 140)
         
         # --- WALKING STATE ---
-        # Move in current direction (either patrol or tracking)
-        self.rect.x += current_speed * self.direction
+        # If at platform edge, go idle and occasionally attack instead of moving
+        at_edge = hasattr(self, 'at_platform_edge') and self.at_platform_edge
+        if at_edge:
+            self.at_platform_edge = False  # Reset for next frame
+            # Start idle animation if not already idling or attacking
+            if not self.is_idling and not self.is_attacking and random.randint(0, 10) == 0:
+                self.start_idle()
+            # Occasionally throw snowball even when at edge
+            if player and self.attack_cooldown <= 0 and random.randint(0, 60) == 0:
+                self.start_attack()
+                self.attack_cooldown = random.randint(100, 180)
+
+        if not at_edge:
+            # Move in current direction (either patrol or tracking)
+            self.rect.x += current_speed * self.direction
         
         # Check patrol bounds only if NOT tracking
         if not self.tracking_mode:

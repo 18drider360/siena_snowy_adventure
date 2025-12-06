@@ -117,7 +117,7 @@ def build_level(abilities=None):
     platform8 = pygame.Rect(3100, 340, 200, 25)
 
     # Before first gap (3500-4200)
-    platform9 = pygame.Rect(3300, 350, 150, 25)
+    platform9 = pygame.Rect(3310, 350, 150, 25)  # Added 10px gap from platform8
 
     # Crossing first gap
     platform10 = pygame.Rect(3650, 320, 180, 25)
@@ -282,16 +282,16 @@ def build_level(abilities=None):
     # HAZARDS - Fire hazards (smaller flames, 40px tall)
     # ===================================================================
 
-    hazard1 = pygame.Rect(1300, 360, 150,  30)
-    hazard2 = pygame.Rect(2500, 360, 180,  30)
-    hazard3 = pygame.Rect(4800, 360, 200,  30)
-    hazard4 = pygame.Rect(6100, 360, 150,  30)
-    hazard5 = pygame.Rect(8300, 360, 180,  30)
-    hazard6 = pygame.Rect(9800, 360, 200,  30)
-    hazard7 = pygame.Rect(12100, 360, 180,  30)
-    hazard8 = pygame.Rect(14000, 360, 200,  30)  # Moved from 13500 (was in gap 13000-13800)
-    hazard9 = pygame.Rect(15200, 360, 150,  30)
-    hazard10 = pygame.Rect(17200, 360, 180,  30)  # Moved from 16500 (was in gap 16000-17000)
+    hazard1 = pygame.Rect(1300, 370, 150,  30)  # FIXED: Y=370 to sit on ground at Y=400
+    hazard2 = pygame.Rect(2700, 370, 180,  30)  # FIXED: Moved away from platform11, Y=370 for ground
+    hazard3 = pygame.Rect(5200, 370, 200,  30)  # FIXED: Moved away from platform19, Y=370 for ground
+    hazard4 = pygame.Rect(6100, 370, 150,  30)  # FIXED: Y=370 to sit on ground at Y=400
+    hazard5 = pygame.Rect(8300, 370, 180,  30)  # FIXED: Y=370 to sit on ground at Y=400
+    hazard6 = pygame.Rect(9800, 370, 200,  30)  # FIXED: Y=370 to sit on ground at Y=400
+    hazard7 = pygame.Rect(12100, 370, 180,  30)  # FIXED: Y=370 to sit on ground at Y=400
+    hazard8 = pygame.Rect(14600, 370, 200,  30)  # FIXED: Moved away from platforms 41 & 42, Y=370 for ground
+    hazard9 = pygame.Rect(15200, 370, 150,  30)  # FIXED: Y=370 to sit on ground at Y=400
+    hazard10 = pygame.Rect(17200, 370, 180,  30)  # FIXED: Y=370 to sit on ground at Y=400
 
     hazards = [hazard1, hazard2, hazard3, hazard4, hazard5, hazard6, hazard7, hazard8, hazard9, hazard10]
 
@@ -361,24 +361,19 @@ def build_level(abilities=None):
     enemies.append(SpikedSlime(x=16200, y=350, patrol_left=16050, patrol_right=16400))
 
     # ===================================================================
-    # COINS - Strategic placement (60 total)
+    # COINS - Strategic placement (45 total)
     # ===================================================================
 
     coins = pygame.sprite.Group()
 
-    # Tutorial area
-    for x in range(300, 2000, 300):
-        coins.add(Coin(x, 320))
+    # Tutorial area (5 coins) - FIXED: Y=265 to clear platforms at Y=300
+    for x in range(400, 2000, 400):
+        coins.add(Coin(x, 265))
 
-    # Additional tutorial coins
+    # Key platform coins (25 coins - selective placement)
     coins.add(Coin(platform1.x + 100, platform1.y - 40))
-    coins.add(Coin(platform2.x + 100, platform2.y - 40))
     coins.add(Coin(platform3.x + 75, platform3.y - 40))
-    coins.add(Coin(platform4.x + 200, platform4.y - 40))
     coins.add(Coin(platform5.x + 100, platform5.y - 40))
-
-    # Above platforms
-    coins.add(Coin(platform6.x + 100, platform6.y - 40))
     coins.add(Coin(platform7.x + 100, platform7.y - 40))
     coins.add(Coin(platform8.x + 100, platform8.y - 40))
     coins.add(Coin(platform10.x + 90, platform10.y - 40))
@@ -389,18 +384,12 @@ def build_level(abilities=None):
     coins.add(Coin(platform19.x + 100, platform19.y - 40))
     coins.add(Coin(platform20.x + 75, platform20.y - 40))
     coins.add(Coin(platform21.x + 100, platform21.y - 40))
-    coins.add(Coin(platform22.x + 100, platform22.y - 40))
     coins.add(Coin(platform24.x + 100, platform24.y - 40))
     coins.add(Coin(platform26.x + 100, platform26.y - 40))
-    coins.add(Coin(platform27.x + 125, platform27.y - 40))
     coins.add(Coin(platform28.x + 100, platform28.y - 40))
-    coins.add(Coin(platform29.x + 75, platform29.y - 40))
     coins.add(Coin(platform30.x + 100, platform30.y - 40))
-    coins.add(Coin(platform31.x + 100, platform31.y - 40))
     coins.add(Coin(platform32.x + 100, platform32.y - 40))
-    coins.add(Coin(platform33.x + 100, platform33.y - 40))
     coins.add(Coin(platform34.x + 100, platform34.y - 40))
-    coins.add(Coin(platform35.x + 100, platform35.y - 40))
     coins.add(Coin(platform36.x + 100, platform36.y - 40))
     coins.add(Coin(platform37.x + 75, platform37.y - 40))
     coins.add(Coin(platform38.x + 100, platform38.y - 40))
@@ -408,21 +397,21 @@ def build_level(abilities=None):
     coins.add(Coin(platform40.x + 100, platform40.y - 40))
     coins.add(Coin(platform41.x + 100, platform41.y - 40))
 
-    # High-risk coins above hazards
-    for hazard in [hazard2, hazard4, hazard6, hazard8]:
+    # High-risk coins above hazards (3 coins)
+    for hazard in [hazard2, hazard6, hazard8]:
         coins.add(Coin(hazard.x + 80, 310))
 
-    # Gap crossing rewards
+    # Gap crossing rewards (4 coins)
     coins.add(Coin(3750, 280))
     coins.add(Coin(7400, 280))
     coins.add(Coin(11400, 290))
     coins.add(Coin(14900, 260))
 
-    # Victory path coins
-    for x in range(16500, 17500, 200):
-        coins.add(Coin(x, 280))
+    # Victory path coins (5 coins) - FIXED: Y=235 to clear platforms at Y=270/295
+    for x in range(16600, 17500, 200):
+        coins.add(Coin(x, 235))
 
-    # Staircase coins
+    # Staircase coins (4 coins)
     coins.add(Coin(stair1.x + 50, stair1.y - 40))
     coins.add(Coin(stair3.x + 50, stair3.y - 40))
     coins.add(Coin(stair5.x + 50, stair5.y - 40))

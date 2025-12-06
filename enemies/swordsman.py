@@ -3,8 +3,11 @@ import random
 
 class Swordsman(pygame.sprite.Sprite):
     """Swordsman enemy - melee attacker with sword hitbox extension and player tracking"""
-    def __init__(self, x, y, patrol_left, patrol_right):
+    def __init__(self, x, y, patrol_left, patrol_right, stay_on_platform=False):
         super().__init__()
+
+        # Platform behavior mode
+        self.stay_on_platform = stay_on_platform  # If True, enemy stops at platform edges instead of turning
 
         # --- POWER EFFECTIVENESS CONFIGURATION ---
         # Define which player powers work against this enemy
@@ -263,7 +266,7 @@ class Swordsman(pygame.sprite.Sprite):
                 if self.tracking_mode:
                     # Apply aggression multiplier to speed
                     chase_speed = self.base_speed * self.aggression
-                    
+
                     # Determine direction to player
                     if dx > 0:  # Player is to the right
                         self.direction = 1
@@ -271,10 +274,10 @@ class Swordsman(pygame.sprite.Sprite):
                     else:  # Player is to the left
                         self.direction = -1
                         self.facing_right = False
-                    
+
                     # Use personality-adjusted speed when chasing
                     self.speed = chase_speed
-                    
+
                     # Attack if player is within attack range
                     if distance < self.attack_range and self.attack_cooldown <= 0:
                         self.start_attack(player)
@@ -286,15 +289,35 @@ class Swordsman(pygame.sprite.Sprite):
                 else:
                     # Reset to base speed when not tracking
                     self.speed = self.base_speed + random.uniform(-0.3, 0.3)
-        
+
         # --- WALKING STATE ---
-        # Move in current direction (either patrol or tracking)
-        # Add slight random variance to prevent perfect synchronization
-        speed_variance = random.uniform(-0.1, 0.1) if random.randint(0, 30) == 0 else 0
-        self.rect.x += (self.speed + speed_variance) * self.direction
-        
-        # Check patrol bounds only if NOT tracking
-        if not self.tracking_mode:
+        # If at platform edge, handle based on stay_on_platform mode
+        at_edge = hasattr(self, 'at_platform_edge') and self.at_platform_edge
+        if at_edge:
+            self.at_platform_edge = False  # Reset for next frame
+
+            if self.stay_on_platform:
+                # Stay at edge mode: stop moving and go idle
+                if not self.is_idling and not self.is_attacking:
+                    self.start_idle()
+                    # Occasionally attack while at edge
+                    if random.randint(0, 60) == 0:
+                        self.start_attack(player)
+                        self.attack_cooldown = random.randint(60, 120)
+                # Don't move if at edge in stay_on_platform mode
+            else:
+                # Normal mode: occasionally go idle at edge
+                if not self.is_idling and not self.is_attacking and random.randint(0, 10) == 0:
+                    self.start_idle()
+
+        if not at_edge or not self.stay_on_platform:
+            # Move in current direction (either patrol or tracking)
+            # Add slight random variance to prevent perfect synchronization
+            speed_variance = random.uniform(-0.1, 0.1) if random.randint(0, 30) == 0 else 0
+            self.rect.x += (self.speed + speed_variance) * self.direction
+
+        # Check patrol bounds only if NOT tracking (and not in stay_on_platform mode)
+        if not self.tracking_mode and not self.stay_on_platform:
             if self.direction == -1 and self.rect.left <= self.patrol_left:
                 old_centerx = self.rect.centerx
                 self.direction = 1

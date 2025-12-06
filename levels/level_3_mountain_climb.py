@@ -348,16 +348,16 @@ def build_level(abilities=None):
     coins.add(Coin(400, 310))
     coins.add(Coin(450, 310))
     coins.add(Coin(750, 260))
-    coins.add(Coin(850, 250))  # NEW - on platform_early1
+    coins.add(Coin(850, 225))  # FIXED: Y=225 to clear platform at Y=260
     coins.add(Coin(1050, 200))  # NEW - on platform_early2
 
     # HIGH-RISK COINS - Above hazards for risk/reward gameplay
     coins.add(Coin(1250, 290))  # NEW - Above hazard1 (risky jump)
-    coins.add(Coin(2350, 290))  # NEW - Above hazard2 (risky jump)
+    coins.add(Coin(2350, 265))  # FIXED: Y=265 to clear platform at Y=300
     coins.add(Coin(3450, 290))  # NEW - Above hazard3 (risky jump)
     coins.add(Coin(4750, 290))  # NEW - Above hazard4 (risky jump)
     # Coin above hazard5 removed - hazard5 was removed (was at x=6000)
-    coins.add(Coin(9250, 290))  # NEW - Above hazard7 (risky jump)
+    coins.add(Coin(9250, 215))  # FIXED: Y=215 to clear platform24 at Y=250
 
     # RHYTHM SECTION COINS - Above appearing platforms (requires timing)
     coins.add(Coin(1450, 240))  # NEW - Above rhythm0
@@ -399,9 +399,9 @@ def build_level(abilities=None):
     coins.add(Coin(10650, 280))  # NEW - On disappear3 (risky timing)
     coins.add(Coin(10850, 290))  # NEW - Above hazard8 (final risky coin)
     coins.add(Coin(11100, 260))
-    coins.add(Coin(11200, 340))  # NEW - Near new enemy before stairs
+    coins.add(Coin(11200, 265))  # FIXED: Y=265 to clear platform27 at Y=300
     coins.add(Coin(11400, 310))
-    coins.add(Coin(11500, 310))
+    coins.add(Coin(11500, 285))  # FIXED: Y=285 to clear platform at Y=320
 
     # ===================================================================
     # LEVEL GOAL NPC

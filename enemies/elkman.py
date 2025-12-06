@@ -230,7 +230,16 @@ class Elkman(pygame.sprite.Sprite):
                 self.tracking_mode = False
         
         # --- MOVEMENT WITH PLATFORM BOUNDARIES ---
-        if should_move:
+        # If at platform edge, occasionally throw snowball instead of moving
+        at_edge = hasattr(self, 'at_platform_edge') and self.at_platform_edge
+        if at_edge:
+            self.at_platform_edge = False  # Reset for next frame
+            # Occasionally throw snowball even when at edge
+            if player and self.attack_cooldown <= 0 and random.randint(0, 60) == 0:
+                self.start_attack()
+                self.attack_cooldown = random.randint(100, 180)
+
+        if should_move and not at_edge:
             new_x = self.rect.x + (self.speed * move_direction)
             
             # Check platform boundaries before moving

@@ -10,23 +10,23 @@ class GameProgression:
 
     # Coin requirements for each level based on difficulty
     # Total coins available: Level 1 = 30, Level 2 = 35, Level 3 = 40, Level 4 = 45
-    # Easy = 60%, Medium = 70%, Hard = 85% (rounded down)
+    # Easy = ~36-60%, Medium = 48-70%, Hard = ~64-93%
     COIN_REQUIREMENTS = {
         "Easy": {
-            1: 18,   # Level 1: 60% of 30 = 18 coins
-            2: 21,   # Level 2: 60% of 35 = 21 coins
+            1: 16,   # Level 1: 53% of 30 = 16 coins
+            2: 22,   # Level 2: 63% of 35 = 22 coins
             3: 24,   # Level 3: 60% of 40 = 24 coins
             4: 27    # Level 4: 60% of 45 = 27 coins
         },
         "Medium": {
             1: 21,   # Level 1: 70% of 30 = 21 coins
-            2: 24,   # Level 2: 70% of 35 = 24 coins (24.5 rounded down)
+            2: 28,   # Level 2: 80% of 35 = 28 coins
             3: 28,   # Level 3: 70% of 40 = 28 coins
             4: 31    # Level 4: 70% of 45 = 31 coins (31.5 rounded down)
         },
         "Hard": {
-            1: 25,   # Level 1: 85% of 30 = 25 coins (25.5 rounded down)
-            2: 29,   # Level 2: 85% of 35 = 29 coins (29.75 rounded down)
+            1: 28,   # Level 1: 93% of 30 = 28 coins
+            2: 32,   # Level 2: 91% of 35 = 32 coins
             3: 34,   # Level 3: 85% of 40 = 34 coins
             4: 38    # Level 4: 85% of 45 = 38 coins (38.25 rounded down)
         }
@@ -186,7 +186,7 @@ class LevelManager:
             'name': 'Northern Lights',
             'module': 'levels.level_4_northern_lights',
             'world': '1-4'
-        },
+        }
     }
     
     @staticmethod

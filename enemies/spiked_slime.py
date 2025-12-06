@@ -286,7 +286,19 @@ class SpikedSlime(pygame.sprite.Sprite):
                 self.tracking_mode = False
         
         # --- MOVEMENT WITH SMART BOUNDARIES ---
-        if should_move and move_direction != 0:
+        # If at platform edge, go idle and occasionally throw spike instead of moving
+        at_edge = hasattr(self, 'at_platform_edge') and self.at_platform_edge
+        if at_edge:
+            self.at_platform_edge = False  # Reset for next frame
+            # Start idle animation if not already idling or attacking
+            if not self.is_idling and not self.is_attacking and random.randint(0, 10) == 0:
+                self.start_idle()
+            # Occasionally throw spike even when at edge (very rare)
+            if player and self.attack_cooldown <= 0 and random.randint(0, 100) == 0:
+                self.start_attack()
+                self.attack_cooldown = random.randint(150, 250)
+
+        if should_move and move_direction != 0 and not at_edge:
             new_x = self.rect.x + (current_speed * move_direction)
             
             # Only enforce boundaries when NOT tracking (i.e., when patrolling)

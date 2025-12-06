@@ -85,14 +85,14 @@ def check_platform_collision_player(player, platforms, tolerance=5):
     return on_ground
 
 
-def check_platform_collision_enemy(enemy, platforms, tolerance=5):
+def check_platform_collision_enemy(enemy, platforms, tolerance=20):
     """
     Check and handle enemy collision with platforms
 
     Args:
         enemy: The enemy object
         platforms: List of platform rectangles
-        tolerance: Pixel tolerance for collision detection
+        tolerance: Pixel tolerance for collision detection (increased to 20 to catch fast-falling enemies from tall drops)
 
     Returns:
         bool: True if enemy is on ground, False otherwise

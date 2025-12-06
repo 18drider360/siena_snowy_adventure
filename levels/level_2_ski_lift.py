@@ -61,7 +61,7 @@ def build_level(abilities=None):
     # GAP 4: 6250-6600 (350px - another gap)
     ground_5 = pygame.Rect(6600, 400, 1100, 30)        # Late section
     # GAP 5: 7700-8000 (300px - final gap challenge)
-    ground_6 = pygame.Rect(8000, 400, 1000, 30)        # End section to goal
+    ground_6 = pygame.Rect(8510, 400, 490, 30)         # End section to goal (10px gap from platform25)
     
     # ===================================================================
     # BEAT 1: ROLL TUTORIAL ZONE (0-1,500px)
@@ -70,10 +70,7 @@ def build_level(abilities=None):
     
     # First low ceiling at 1000px - FORCES crouch/roll discovery
     # Ceiling at Y=315 (85px above ground) - just below standing height
-    low_ceiling_1 = pygame.Rect(1000, 315, 350, 30)
-    
-    # Platform UNDERNEATH low ceiling - wide and safe
-    platform1 = pygame.Rect(1020, 365, 300, 25)
+    low_ceiling_1 = pygame.Rect(800, 330, 350, 30)
     
     # ===================================================================
     # BEAT 2: ROLL APPLICATION (1,500-2,800px)
@@ -85,7 +82,7 @@ def build_level(abilities=None):
     platform3 = pygame.Rect(1950, 350, 180, 25)  # 170px gap needs roll
     
     # Low ceiling section with narrow platforms
-    low_ceiling_2 = pygame.Rect(2200, 305, 500, 30)
+    low_ceiling_2 = pygame.Rect(2200, 285, 500, 30)
     platform4 = pygame.Rect(2250, 365, 100, 25)
     platform5 = pygame.Rect(2450, 365, 100, 25)
     platform6 = pygame.Rect(2650, 365, 100, 25)  # Enemy line spans these 3
@@ -110,52 +107,72 @@ def build_level(abilities=None):
     # BEAT 4: FROST GOLEM INTRODUCTION (4,000-5,200px)
     # Goal: Learn ranged enemy patterns
     # ===================================================================
-    
+
     # High platform for FIRST Golem - visible from far away
     platform10 = pygame.Rect(4200, 185, 250, 25)
-    
+
     # Approach platforms - dodging fireballs
     platform11 = pygame.Rect(4550, 300, 150, 25)
-    platform12 = pygame.Rect(4800, 350, 150, 25)
-    
-    # Second Golem on ground level
-    # (uses invisible ground)
-    
+    # Removed platform12 - overlaps with platform_tunnel_1
+
+    # NEW: Frost Tunnel - Long forced roll section under hazards
+    hazard_ceiling_1 = pygame.Rect(4600, 200, 430, 25)  # Low ceiling forces roll (165px clearance from platform below) - Extended to 5030 to match hazard_ceiling_1c
+    platform_tunnel_1 = pygame.Rect(4600, 365, 430, 25)  # Platform underneath entire tunnel
+
     # Checkpoint
     checkpoint2 = pygame.Rect(5100, 350, 180, 25)
-    
+
     # ===================================================================
     # BEAT 5: MIXED CHALLENGES (5,200-6,400px)
     # Goal: Combine both enemy types
     # ===================================================================
-    
-    # Two-tier combat arena
-    platform13 = pygame.Rect(5450, 365, 200, 25)  # Lower tier
-    platform14 = pygame.Rect(5450, 200, 200, 25)  # Upper tier
-    
+
+    # Removed platform13 and platform14 - overlap with tunnel platforms below
+
+    # NEW: Double Hazard Squeeze - Two consecutive low ceilings
+    hazard_ceiling_2a = pygame.Rect(5500, 205, 150, 25)  # First squeeze section (160px clearance)
+    platform_tunnel_2a = pygame.Rect(5500, 365, 150, 25)  # Platform under first squeeze
+    hazard_ceiling_2b = pygame.Rect(5700, 200, 150, 25)  # Second squeeze section (tighter! 165px clearance)
+    platform_tunnel_2b = pygame.Rect(5700, 365, 150, 25)  # Platform under second squeeze
+
     # Narrow platform gauntlet
-    platform15 = pygame.Rect(5800, 340, 100, 25)
+    platform15 = pygame.Rect(5860, 340, 100, 25)  # Added 60px gap from platform_tunnel_2b
     platform16 = pygame.Rect(6000, 290, 100, 25)
     platform17 = pygame.Rect(6200, 340, 100, 25)
-    
+
     # ===================================================================
     # BEAT 6: CLIMAX (6,400-7,000px)
     # Goal: Peak difficulty test
     # ===================================================================
-    
+
+    # Removed checkpoint3 - overlaps with platform_tunnel_3
+
+    # NEW: Climax Crawl - Longest forced roll section with dual enemy fire
+    hazard_ceiling_3 = pygame.Rect(6500, 200, 470, 25)  # Longest ceiling (165px clearance from platform) - Extended to 6970 to match hazard_new_3d
+    platform_tunnel_3 = pygame.Rect(6500, 365, 470, 25)  # Platform underneath entire tunnel
+
     # Multi-level boss arena
-    platform18 = pygame.Rect(6550, 365, 150, 25)  # Ground level
+    # Removed platform18 - overlaps with platform_tunnel_3
     platform19 = pygame.Rect(6550, 230, 150, 25)  # High level
     platform20 = pygame.Rect(6800, 300, 150, 25)  # Mid level
-    
+
     # ===================================================================
     # BEAT 7: EXTENDED SECTION (7,500-8,500px)
     # More roll practice with platforms
     # ===================================================================
 
+    # NEW: Narrow Passage - Medium roll tunnel with swordsman ambush at exit
+    hazard_ceiling_4 = pygame.Rect(7100, 205, 330, 25)  # Forces roll before enemy encounter (160px clearance) - Extended to 7430 to match hazard_new_4c
+    platform_tunnel_4 = pygame.Rect(7100, 365, 330, 25)  # Platform underneath tunnel
+
     # Additional platforms for extended section
-    platform21 = pygame.Rect(7250, 350, 150, 25)
+    # Removed platform21 - overlaps with platform_tunnel_4
     platform22 = pygame.Rect(7600, 300, 150, 25)
+
+    # Bridge to victory section (fill the gap)
+    platform23 = pygame.Rect(7850, 350, 150, 25)
+    platform24 = pygame.Rect(8100, 330, 150, 25)
+    platform25 = pygame.Rect(8350, 380, 150, 25)
 
     # ===================================================================
     # BEAT 8: RESOLUTION (8,500-9,000px)
@@ -171,15 +188,35 @@ def build_level(abilities=None):
     goal_platform = pygame.Rect(8920, 200, 80, 25)
     
     # ===================================================================
-    # HAZARDS - Strategic pit placement (fewer, more meaningful)
+    # HAZARDS - Ceiling hazards force rolling
     # ===================================================================
 
-    # Fire hazards (smaller flames, 30px tall - only on solid ground)
-    hazard1 = pygame.Rect(2150, 370, 150, 30)  # After roll-jump tutorial - on ground_2
+    # NEW: Hazards on ceiling platforms (visual danger above forcing player to stay low)
+    # Ceilings at Y=200-205, hazards sit on top at Y=170-175
+    # This creates visual danger above the tunnel forcing players to roll/crouch
 
-    hazard2 = pygame.Rect(5200, 370, 180, 30)  # Moved to ground_4 (was floating in gap)
+    # Beat 4 - Frost Tunnel hazards (on top of ceiling platform at Y=200)
+    hazard_ceiling_1a = pygame.Rect(4630, 170, 100, 30)  # On top of ceiling
+    hazard_ceiling_1b = pygame.Rect(4780, 170, 100, 30)
+    hazard_ceiling_1c = pygame.Rect(4930, 170, 90, 30)
 
-    hazard3 = pygame.Rect(6750, 370, 120, 30)  # In climax area - on ground_5
+    # Beat 5 - Double Squeeze hazards (on top of ceiling platforms)
+    hazard_ceiling_2a_top = pygame.Rect(5520, 170, 80, 30)  # On ceiling at Y=205
+    hazard_ceiling_2b_top = pygame.Rect(5720, 170, 80, 30)  # On ceiling at Y=200
+
+    # Beat 6 - Climax Crawl hazards (on top of ceiling platform at Y=200)
+    hazard_ceiling_3a = pygame.Rect(6530, 170, 80, 30)
+    hazard_ceiling_3b = pygame.Rect(6650, 170, 80, 30)
+    hazard_ceiling_3c = pygame.Rect(6770, 170, 80, 30)
+    hazard_ceiling_3d = pygame.Rect(6890, 170, 80, 30)
+
+    # Beat 7 - Narrow Passage hazards (on top of ceiling platform at Y=205)
+    hazard_ceiling_4a = pygame.Rect(7130, 175, 80, 30)
+    hazard_ceiling_4b = pygame.Rect(7240, 175, 80, 30)
+    hazard_ceiling_4c = pygame.Rect(7350, 175, 70, 30)
+
+    # Beat 8 - Final challenge hazard on ground (before victory stairs)
+    hazard_final = pygame.Rect(8360, 350, 120, 30)  # Ground hazard at Y=370 (sits on ground at Y=400)
     
     # ===================================================================
     # COMPILE PLATFORMS
@@ -187,23 +224,40 @@ def build_level(abilities=None):
     
     platforms = [
         ground_1, ground_2, ground_3, ground_4, ground_5, ground_6,  # Ground segments with gaps
-        low_ceiling_1, platform1,
+        low_ceiling_1,
         platform2, platform3,
         low_ceiling_2, platform4, platform5, platform6,
         checkpoint1,
         platform7, platform8,
         low_ceiling_3, platform9,
-        platform10, platform11, platform12,
+        platform10, platform11,
+        # Removed platform12 - overlaps with platform_tunnel_1
+        hazard_ceiling_1, platform_tunnel_1,  # NEW: Beat 4 - Frost Tunnel (ceiling + platform below)
         checkpoint2,
-        platform13, platform14,
+        # Removed platform13, platform14 - overlap with tunnel platforms
+        hazard_ceiling_2a, platform_tunnel_2a,  # NEW: Beat 5 - Double Squeeze (ceiling + platform)
+        hazard_ceiling_2b, platform_tunnel_2b,  # NEW: Beat 5 - Double Squeeze (ceiling + platform)
         platform15, platform16, platform17,
-        platform18, platform19, platform20,
-        platform21, platform22,  # Extended section platforms
+        # Removed checkpoint3 - overlaps with platform_tunnel_3
+        hazard_ceiling_3, platform_tunnel_3,  # NEW: Beat 6 - Climax Crawl (ceiling + platform)
+        # Removed platform18 - overlaps with platform_tunnel_3
+        platform19, platform20,
+        hazard_ceiling_4, platform_tunnel_4,  # NEW: Beat 7 - Narrow Passage (ceiling + platform)
+        # Removed platform21 - overlaps with platform_tunnel_4
+        platform22,  # Extended section platforms
+        platform23, platform24, platform25,  # Bridge to victory section
         stair1, stair2, stair3,
         goal_platform
     ]
     
-    hazards = [hazard1, hazard2, hazard3]
+    hazards = [
+        # Ceiling hazards (on top of low ceiling platforms - force rolling)
+        hazard_ceiling_1a, hazard_ceiling_1b, hazard_ceiling_1c,  # Frost Tunnel
+        hazard_ceiling_2a_top, hazard_ceiling_2b_top,  # Double Squeeze
+        hazard_ceiling_3a, hazard_ceiling_3b, hazard_ceiling_3c, hazard_ceiling_3d,  # Climax Crawl
+        hazard_ceiling_4a, hazard_ceiling_4b, hazard_ceiling_4c,  # Narrow Passage
+        hazard_final  # Final ground hazard before victory
+    ]
     
     # ===================================================================
     # PLAYER SETUP
@@ -234,68 +288,76 @@ def build_level(abilities=None):
     
     # BEAT 1: Tutorial enemy under low ceiling
     # Platform1 at Y=365, Swordsman height=130, spawn at Y=235
-    swordsman1 = Swordsman(x=1150, y=235, patrol_left=1020, patrol_right=1300)
+    swordsman1 = Swordsman(x=1050, y=285, patrol_left=1020, patrol_right=1300, stay_on_platform=True)
     enemies.add(swordsman1)
 
     # BEAT 2: Reduced enemy line - only 2 swordsmen instead of 3
     # Enemy line across platforms 4,5 (Y=365), spawn at 235
-    swordsman2 = Swordsman(x=2300, y=235, patrol_left=2250, patrol_right=2530)
+    swordsman2 = Swordsman(x=2300, y=235, patrol_left=2250, patrol_right=2530, stay_on_platform=True)
     enemies.add(swordsman2)
 
-    swordsman3 = Swordsman(x=2550, y=235, patrol_left=2450, patrol_right=2730)
+    swordsman3 = Swordsman(x=2550, y=235, patrol_left=2450, patrol_right=2730, stay_on_platform=True)
     enemies.add(swordsman3)
 
     # BEAT 3: One swordsman on elevated platform
     # Platform7 at Y=280, spawn at 150
-    swordsman4 = Swordsman(x=3300, y=150, patrol_left=3200, patrol_right=3380)
+    swordsman4 = Swordsman(x=3300, y=150, patrol_left=3200, patrol_right=3380, stay_on_platform=True)
     enemies.add(swordsman4)
 
     # Platform9 under ceiling (Y=365), spawn at 235
-    swordsman5 = Swordsman(x=4100, y=235, patrol_left=3950, patrol_right=4280)
+    swordsman5 = Swordsman(x=4100, y=235, patrol_left=3950, patrol_right=4280, stay_on_platform=True)
     enemies.add(swordsman5)
-    
+
     # BEAT 4: Frost Golem introduction - reduced count
     # Platform10 elevated (Y=185), Golem height=80, spawn at 105
-    frost1 = FrostGolem(x=4320, y=105, patrol_left=4200, patrol_right=4430)
+    frost1 = FrostGolem(x=4320, y=105, patrol_left=4200, patrol_right=4430, stay_on_platform=True)
     enemies.add(frost1)
 
     # Ground level Golem (Y=400), spawn at 320
-    frost2 = FrostGolem(x=4650, y=320, patrol_left=4550, patrol_right=4750)
+    frost2 = FrostGolem(x=4650, y=320, patrol_left=4550, patrol_right=4750, stay_on_platform=True)
     enemies.add(frost2)
 
     # Platform12 (Y=350), spawn at 270
-    frost3 = FrostGolem(x=4870, y=270, patrol_left=4800, patrol_right=4930)
+    frost3 = FrostGolem(x=4870, y=270, patrol_left=4800, patrol_right=4930, stay_on_platform=True)
     enemies.add(frost3)
 
     # BEAT 5: Mixed encounters - reduced
     # Platform14 upper tier (Y=200), Golem at 120
-    frost4 = FrostGolem(x=5550, y=120, patrol_left=5450, patrol_right=5630)
+    frost4 = FrostGolem(x=5550, y=120, patrol_left=5450, patrol_right=5630, stay_on_platform=True)
     enemies.add(frost4)
 
     # Platform15 (Y=340), Golem at 260
-    frost5 = FrostGolem(x=5850, y=260, patrol_left=5800, patrol_right=5880)
+    frost5 = FrostGolem(x=5850, y=260, patrol_left=5800, patrol_right=5880, stay_on_platform=True)
     enemies.add(frost5)
 
     # BEAT 6: Climax encounter - reduced
     # Platform19 elevated (Y=230), Golem at 150
-    frost6 = FrostGolem(x=6630, y=150, patrol_left=6550, patrol_right=6680)
+    frost6 = FrostGolem(x=6630, y=150, patrol_left=6550, patrol_right=6680, stay_on_platform=True)
     enemies.add(frost6)
 
     # Platform20 mid-level (Y=300), Golem at 220
-    frost7 = FrostGolem(x=6870, y=220, patrol_left=6800, patrol_right=6930)
+    frost7 = FrostGolem(x=6870, y=220, patrol_left=6800, patrol_right=6930, stay_on_platform=True)
     enemies.add(frost7)
 
     # BEAT 7: Extended section enemies - final challenge before stairs
     # Ground level (Y=400), Swordsman height=130, spawn at 270
-    swordsman6 = Swordsman(x=7400, y=270, patrol_left=7250, patrol_right=7550)
+    # ADJUSTED: Moved to x=7420 to create ambush immediately after Narrow Passage tunnel exit
+    swordsman6 = Swordsman(x=7420, y=270, patrol_left=7100, patrol_right=7550, stay_on_platform=True)
     enemies.add(swordsman6)
 
     # Platform22 (Y=300), Golem at 220
-    frost8 = FrostGolem(x=7700, y=220, patrol_left=7600, patrol_right=7750)
+    frost8 = FrostGolem(x=7700, y=220, patrol_left=7600, patrol_right=7750, stay_on_platform=True)
     enemies.add(frost8)
 
+    # BEAT 8: Final enemy on bridge platforms
+    # Platform24 (Y=330), Swordsman height=130, spawn at 200
+    swordsman7 = Swordsman(x=8100, y=200, patrol_left=8050, patrol_right=8230, stay_on_platform=True)
+    enemies.add(swordsman7)
+
     # ===================================================================
-    # COIN PLACEMENT (~60 coins with extended section)
+    # COIN PLACEMENT (~50 coins total)
+    # Original: ~35 coins
+    # NEW: +15 coins under forced roll tunnels (3+4+5+4)
     # Coin height = 30px, so Y position is the TOP of the coin
     # Platform top positions: 365, 350, 340, etc.
     # Safe above platform: coin Y < platform_top - 40 (gives 10px+ clearance)
@@ -303,107 +365,62 @@ def build_level(abilities=None):
     # ===================================================================
     
     coins = pygame.sprite.Group()
-    
-    # BEAT 1: Tutorial coins on ground level (Y=360, well above ground at 400)
-    for i in range(6):
-        coins.add(Coin(300 + i * 140, 360))
 
-    # Additional ground coins
-    coins.add(Coin(950, 360))
+    # Roll tutorial under low ceiling (3 coins)
+    for i in range(3):
+        coins.add(Coin(900 + i * 80, 380))
 
-    # Coins showing roll path under low ceiling (Y=280, ceiling at 315, platform at 365)
-    # Y=280 is 35px above platform (365), safe clearance
-    for i in range(4):
-        coins.add(Coin(1050 + i * 70, 280))
-    
-    # BEAT 2: Roll-jump teaching arc (peaks at Y=300, platforms at Y=350)
-    # Y=300 is 50px above platform, safe
+    # BEAT 2: Roll-jump teaching arc (3 coins)
     coins.add(Coin(1700, 300))
-    coins.add(Coin(1780, 280))
     coins.add(Coin(1860, 280))
     coins.add(Coin(1940, 300))
-    
-    # Coins under second low ceiling (Y=320, ceiling at 305, platforms at 365)
-    # Y=320 is 45px above platforms, safe
-    for i in range(5):
-        coins.add(Coin(2270 + i * 100, 320))
-    
-    # Checkpoint approach (Y=300, checkpoint at 350)
+
+    # Under second low ceiling (3 coins)
     for i in range(3):
-        coins.add(Coin(2750 + i * 80, 300))
-    
-    # BEAT 3: Elevated platform coins
-    # Platform7 at Y=280, coins at Y=230 (50px above)
+        coins.add(Coin(2270 + i * 120, 220))
+
+    # Checkpoint approach (2 coins)
+    coins.add(Coin(2750, 300))
+    coins.add(Coin(2850, 300))
+
+    # BEAT 3: Elevated platforms (2 coins)
     coins.add(Coin(3300, 230))
-    # Platform8 at Y=220, coins at Y=170 (50px above)
-    coins.add(Coin(3650, 170))
-    
-    # Under third low ceiling (Y=320, ceiling at 295, platform at 365)
-    for i in range(4):
-        coins.add(Coin(3980 + i * 80, 320))
-    
-    # BEAT 4: Frost Golem section - coins showing safe paths
-    # Ground level coins (Y=360)
+    coins.add(Coin(3650, 300))
+
+    # Under third low ceiling (3 coins) - FIXED: Y=260 to clear platform at Y=295
     for i in range(3):
-        coins.add(Coin(4100 + i * 120, 360))
-    
-    # Approach platforms
-    # Platform11 at Y=300, coin at Y=250 (50px above)
-    coins.add(Coin(4620, 250))
-    # Platform12 at Y=350, coin at Y=300 (50px above)
-    coins.add(Coin(4870, 300))
-    
-    # Checkpoint approach (Y=300, checkpoint at 350)
-    for i in range(3):
-        coins.add(Coin(5020 + i * 80, 300))
-    
-    # BEAT 5: Mixed challenge coins
-    # Platform13 at Y=365, coin at Y=315 (50px above)
-    coins.add(Coin(5550, 315))
-    # Platform14 at Y=200, coin at Y=150 (50px above)
-    coins.add(Coin(5550, 150))
-    
-    # Narrow platform trail
-    # Platform15 at Y=340, coin at Y=290 (50px above)
-    coins.add(Coin(5870, 290))
-    # Platform16 at Y=290, coin at Y=240 (50px above)
-    coins.add(Coin(6070, 240))
-    # Platform17 at Y=340, coin at Y=290 (50px above)
-    coins.add(Coin(6270, 290))
-    
-    # BEAT 6: Climax coins
-    # Platform18 at Y=365, coin at Y=315 (50px above)
-    coins.add(Coin(6630, 315))
-    # Platform19 at Y=230, coin at Y=180 (50px above)
-    coins.add(Coin(6630, 180))
-    # Platform20 at Y=300, coin at Y=250 (50px above)
+        coins.add(Coin(4000 + i * 100, 340))
+
+    # BEAT 4: Frost Golem section - spread around platforms (4 coins)
+    coins.add(Coin(4150, 260))  # In air before platform10 - FIXED: below platform at Y=295
+    coins.add(Coin(4320, 240))  # Above platform10 (Y=185), coin at Y=155 clears by 30px
+    coins.add(Coin(4600, 270))  # Between platforms, well above platform12 (Y=350)
+    coins.add(Coin(5000, 310))  # Approaching checkpoint2
+
+    # Checkpoint approach (2 coins)
+    coins.add(Coin(5050, 300))
+    coins.add(Coin(5150, 300))
+
+    # BEAT 5: Narrow platforms (3 coins)
+    coins.add(Coin(5850, 290))
+    coins.add(Coin(6050, 240))
+    coins.add(Coin(6250, 290))
+
+    # BEAT 6: Climax (5 coins)
+    coins.add(Coin(6630, 300))  # Above platform19 (Y=230)
+    coins.add(Coin(6750, 270))  # Above platform20 (Y=300)
     coins.add(Coin(6870, 250))
-    
-    # BEAT 7: Victory staircase coins
-    # Stair1 at Y=360, coin at Y=310 (50px above)
-    coins.add(Coin(7110, 310))
-    # Stair2 at Y=305, coin at Y=255 (50px above)
-    coins.add(Coin(7230, 255))
-    # Stair3 at Y=250, coin at Y=200 (50px above)
-    coins.add(Coin(7350, 200))
-    
-    # Extended section coins (Y=360 ground level, Y=250 platform level)
-    for i in range(6):
-        coins.add(Coin(7300 + i * 50, 360))
+    coins.add(Coin(6950, 265))  # Between platforms - FIXED: below platform20 at Y=300
+    coins.add(Coin(7050, 360))  # Before Narrow Passage tunnel
 
-    # Coins on platform22
-    coins.add(Coin(7650, 250))
-    coins.add(Coin(7700, 250))
-    coins.add(Coin(7750, 250))
+    # BEAT 7: Narrow Passage area (2 coins)
+    coins.add(Coin(7250, 320))  # Above platform21 (Y=350)
+    coins.add(Coin(7500, 360))  # In air above ground
 
-    # Final staircase coins leading to goal
-    coins.add(Coin(8580, 320))  # Near stair1
-    coins.add(Coin(8700, 265))  # Near stair2
-    coins.add(Coin(8820, 210))  # Near stair3
-
-    # Final arc to goal (Y=150, goal platform at Y=200)
-    for i in range(3):
-        coins.add(Coin(8900 + i * 40, 150))
+    # Final staircase (3 coins)
+    coins.add(Coin(8580, 320))
+    coins.add(Coin(8700, 265))
+    coins.add(Coin(8820, 210))
 
     # ===================================================================
     # LEVEL GOAL NPC

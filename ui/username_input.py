@@ -39,14 +39,48 @@ class UsernameInput:
         "Tiny", "Little", "Swift", "Brave", "Mighty", "Cool", "Frosty", "Snowy",
         "Icy", "Chill", "Arctic", "Winter", "Frozen", "Bold", "Quick", "Happy",
         "Lucky", "Smart", "Clever", "Wild", "Bright", "Shiny", "Silent", "Stealth",
-        "Epic", "Super", "Mega", "Ultra", "Turbo", "Hyper"
+        "Epic", "Super", "Mega", "Ultra", "Turbo", "Hyper", "Cosmic", "Crystal",
+        "Diamond", "Golden", "Silver", "Bronze", "Mystic", "Magic", "Noble", "Royal",
+        "Ancient", "Elder", "Grand", "Prime", "Alpha", "Omega", "Blazing", "Fiery",
+        "Thunder", "Lightning", "Shadow", "Dark", "Light", "Radiant", "Glowing", "Neon",
+        "Electric", "Quantum", "Cyber", "Digital", "Virtual", "Pixel", "Retro", "Classic",
+        "Legendary", "Mythic", "Savage", "Fierce", "Mighty", "Powerful", "Strong", "Tough",
+        "Speedy", "Rapid", "Flash", "Sonic", "Blazing", "Dashing", "Racing", "Flying",
+        "Soaring", "Gliding", "Jumping", "Bouncing", "Rolling", "Spinning", "Twisting", "Dancing",
+        "Hidden", "Secret", "Mystery", "Phantom", "Ghost", "Spirit", "Soul", "Zen",
+        "Wise", "Sage", "Ancient", "Eternal", "Timeless", "Endless", "Infinite", "Boundless",
+        "Crimson", "Scarlet", "Azure", "Cobalt", "Emerald", "Jade", "Ruby", "Sapphire",
+        "Frosty", "Glacial", "Polar", "Nordic", "Boreal", "Tundra", "Alpine", "Summit",
+        "Peak", "Mountain", "Valley", "River", "Ocean", "Storm", "Tempest", "Hurricane",
+        "Blizzard", "Avalanche", "Glacier", "Iceberg", "Snowdrift", "Powder", "Flurry", "Whiteout",
+        "Frozen", "Chilled", "Bitter", "Sharp", "Keen", "Piercing", "Cutting", "Striking",
+        "Daring", "Fearless", "Valiant", "Heroic", "Noble", "Gallant", "Proud", "Majestic",
+        "Stellar", "Solar", "Lunar", "Astral", "Celestial", "Nebula", "Galaxy", "Cosmic"
     ]
 
     NOUNS = [
         "Gamer", "Player", "Hero", "Ninja", "Wizard", "Knight", "Dragon", "Tiger",
         "Wolf", "Bear", "Fox", "Hawk", "Eagle", "Lion", "Panda", "Penguin",
         "Racoon", "Otter", "Yeti", "Snowman", "Warrior", "Champion", "Legend",
-        "Master", "Pro", "Star", "Comet", "Storm", "Blaze", "Thunder"
+        "Master", "Pro", "Star", "Comet", "Storm", "Blaze", "Thunder", "Lightning",
+        "Phoenix", "Griffin", "Falcon", "Raven", "Crow", "Owl", "Sparrow", "Robin",
+        "Lynx", "Panther", "Leopard", "Cheetah", "Jaguar", "Cougar", "Puma", "Bobcat",
+        "Moose", "Elk", "Deer", "Reindeer", "Caribou", "Bison", "Buffalo", "Ram",
+        "Husky", "Malamute", "Samoyed", "Akita", "Shiba", "Corgi", "Shepherd", "Collie",
+        "Seal", "Walrus", "Narwhal", "Whale", "Dolphin", "Orca", "Shark", "Barracuda",
+        "Mammoth", "Sabretooth", "Direwolf", "Wyvern", "Drake", "Basilisk", "Hydra", "Kraken",
+        "Titan", "Golem", "Colossus", "Behemoth", "Leviathan", "Juggernaut", "Sentinel", "Guardian",
+        "Ranger", "Scout", "Hunter", "Tracker", "Seeker", "Finder", "Explorer", "Voyager",
+        "Wanderer", "Nomad", "Drifter", "Traveler", "Pilgrim", "Journeyer", "Adventurer", "Pioneer",
+        "Climber", "Jumper", "Runner", "Skier", "Boarder", "Rider", "Glider", "Flyer",
+        "Striker", "Fighter", "Brawler", "Boxer", "Duelist", "Gladiator", "Samurai", "Ronin",
+        "Paladin", "Templar", "Crusader", "Cleric", "Priest", "Monk", "Sage", "Oracle",
+        "Mage", "Sorcerer", "Warlock", "Witch", "Shaman", "Druid", "Mystic", "Enchanter",
+        "Rogue", "Thief", "Assassin", "Shadow", "Phantom", "Ghost", "Specter", "Wraith",
+        "Blizzard", "Avalanche", "Glacier", "Iceberg", "Frost", "Snowflake", "Icicle", "Crystal",
+        "Peak", "Summit", "Ridge", "Cliff", "Crag", "Boulder", "Stone", "Rock",
+        "Vortex", "Cyclone", "Typhoon", "Tornado", "Whirlwind", "Maelstrom", "Tempest", "Gale",
+        "Nova", "Nebula", "Quasar", "Pulsar", "Meteor", "Asteroid", "Satellite", "Cosmos"
     ]
 
     def __init__(self, screen):
@@ -631,12 +665,12 @@ class PlayerProfileScreen:
             self.screen.blit(note_surface, note_rect)
             y_offset += 20
 
-        # Back button
+        # Confirm button
         back_rect = self.get_back_button_rect()
-        self.draw_button("BACK", back_rect, "BACK")
+        self.draw_button("CONFIRM", back_rect, "BACK")
 
         # Navigation hint
-        hint_text = "Use LEFT/RIGHT arrows to change difficulty  |  ENTER or ESC to go back"
+        hint_text = "Use LEFT/RIGHT arrows to change difficulty  |  ENTER or ESC to confirm"
         hint_surface = self.note_font.render(hint_text, True, (150, 170, 200))
         hint_rect = hint_surface.get_rect(center=(screen_width // 2, 565))
         self.screen.blit(hint_surface, hint_rect)

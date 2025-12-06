@@ -35,13 +35,13 @@ class Pilos(pygame.sprite.Sprite):
         """Move the spear with arc physics"""
         # Horizontal movement
         self.rect.x += self.speed_x * self.direction
-        
+
         # Apply gravity for arc
         self.speed_y += self.gravity
         self.rect.y += self.speed_y
-        
+
         # Remove if off screen or hits ground
-        if self.rect.x < -100 or self.rect.x > 3000 or self.rect.y > 600:
+        if self.rect.x < -100 or self.rect.x > 15000 or self.rect.y > 600:
             self.kill()
 
 
@@ -307,19 +307,35 @@ class Northerner(pygame.sprite.Sprite):
                         # OPTIMAL RANGE - STOP AND ATTACK
                         # Stop moving to take aim
                         self.direction = 0
-                        
+
                         # Attack if cooldown ready
                         if self.attack_cooldown <= 0:
                             self.start_attack()
                             self.attack_cooldown = random.randint(80, 140)
+
+                    # ALSO attack from any range if tracking and cooldown ready (more aggressive)
+                    if self.attack_cooldown <= 0 and random.randint(0, 30) == 0:
+                        self.start_attack()
+                        self.attack_cooldown = random.randint(100, 160)
         
         # --- WALKING STATE ---
-        # Only move if direction is set (0 means stop)
-        if self.direction != 0:
+        # If at platform edge, go idle and occasionally throw spear instead of moving
+        at_edge = hasattr(self, 'at_platform_edge') and self.at_platform_edge
+        if at_edge:
+            self.at_platform_edge = False  # Reset for next frame
+            # Start idle animation if not already idling or attacking
+            if not self.is_idling and not self.is_attacking and random.randint(0, 10) == 0:
+                self.start_idle()
+            # Occasionally throw spear even when at edge
+            if player and self.attack_cooldown <= 0 and random.randint(0, 60) == 0:
+                self.start_attack()
+                self.attack_cooldown = random.randint(100, 180)
+
+        if self.direction != 0 and not at_edge:
             self.rect.x += self.speed * self.direction
-        
+
         # Check patrol bounds only if NOT tracking
-        if not self.tracking_mode:
+        if not self.tracking_mode and not at_edge:
             if self.direction == -1 and self.rect.left <= self.patrol_left:
                 old_centerx = self.rect.centerx
                 self.direction = 1
@@ -468,27 +484,31 @@ class Northerner(pygame.sprite.Sprite):
     
     def throw_spear_at_player(self, projectile_group, player):
         """Create and launch a spear with intelligent aiming"""
+        # Don't throw if no projectile group provided
+        if projectile_group is None:
+            return
+
         offset = 40 if self.facing_right else -40
         spear_x = self.rect.centerx + offset
         spear_y = self.rect.centery - 20  # Shoulder level
-        
+
         direction = 1 if self.facing_right else -1
-        
+
         # INTELLIGENT AIMING
         if player and self.tracking_mode:
             # Calculate where player will be
             dx = player.hitbox.centerx - spear_x
             dy = player.hitbox.centery - spear_y
-            
+
             # Lead the shot based on player velocity
             # Estimate time to reach player
             time_to_target = abs(dx) / 15.0  # 15 is base spear speed
             predicted_x = player.hitbox.centerx + (self.player_velocity_x * time_to_target)
-            
+
             # Recalculate with prediction
             dx = predicted_x - spear_x
             distance = abs(dx)
-            
+
             # Adjust arc based on distance
             if distance > 250:
                 # Long range - higher arc
@@ -502,18 +522,18 @@ class Northerner(pygame.sprite.Sprite):
                 # Close range - flat trajectory
                 speed_y = -1
                 speed_x = 14
-            
+
             # Adjust vertical aim for height difference
             if dy < -30:  # Player is above
                 speed_y -= 1.5
             elif dy > 30:  # Player is below
                 speed_y += 1
-            
+
             spear = Pilos(spear_x, spear_y, direction, speed_x, speed_y)
         else:
             # Default throw if no player tracking
             spear = Pilos(spear_x, spear_y, direction)
-        
+
         projectile_group.add(spear)
     
     def animate_walk(self):

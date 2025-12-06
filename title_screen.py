@@ -291,6 +291,14 @@ class TitleScreen:
         pygame.draw.circle(screen, (200, 220, 255), (center_x, center_y), center_hole_radius)  # Sky blue background
         pygame.draw.circle(screen, gear_color, (center_x, center_y), center_hole_radius, 2)
 
+        # Draw "SETTINGS" text in grey to the left of the gear
+        grey = (120, 120, 120)
+        settings_text = self.small_font.render("SETTINGS", True, grey)
+        text_rect = settings_text.get_rect()
+        text_rect.right = rect.left - 10  # Position to the left of gear with 10px spacing
+        text_rect.centery = center_y
+        screen.blit(settings_text, text_rect)
+
     def draw(self, screen):
         """Draw the complete title screen"""
         # Winter sky background (lighter blue/white)

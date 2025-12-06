@@ -53,8 +53,11 @@ class Fireball(pygame.sprite.Sprite):
 
 class FrostGolem(pygame.sprite.Sprite):
     """Frost Golem enemy - fast, agile, and uses hit-and-run tactics"""
-    def __init__(self, x, y, patrol_left, patrol_right):
+    def __init__(self, x, y, patrol_left, patrol_right, stay_on_platform=False):
         super().__init__()
+
+        # Platform behavior mode
+        self.stay_on_platform = stay_on_platform  # If True, enemy stops at platform edges instead of turning
         
         # --- POWER EFFECTIVENESS CONFIGURATION ---
         # Define which player powers work against this enemy
@@ -438,15 +441,38 @@ class FrostGolem(pygame.sprite.Sprite):
             self.direction = self.dodge_direction
         
         # --- WALKING STATE ---
-        if self.direction != 0:
+        # If at platform edge, handle based on stay_on_platform mode
+        at_edge = hasattr(self, 'at_platform_edge') and self.at_platform_edge
+        if at_edge:
+            self.at_platform_edge = False  # Reset for next frame
+
+            if self.stay_on_platform:
+                # Stay at edge mode: stop moving and go idle
+                if not self.is_idling and not self.is_attacking:
+                    self.start_idle()
+                # Throw fireballs occasionally while at edge
+                if player and self.attack_cooldown <= 0 and random.randint(0, 40) == 0:
+                    self.start_attack()
+                    self.attack_cooldown = random.randint(80, 140)
+                # Don't move if at edge in stay_on_platform mode
+            else:
+                # Normal mode: occasionally go idle at edge
+                if not self.is_idling and not self.is_attacking and random.randint(0, 10) == 0:
+                    self.start_idle()
+                # Occasionally throw fireball even when at edge
+                if player and self.attack_cooldown <= 0 and random.randint(0, 60) == 0:
+                    self.start_attack()
+                    self.attack_cooldown = random.randint(100, 180)
+
+        if self.direction != 0 and (not at_edge or not self.stay_on_platform):
             # Add slight random variance to prevent synchronization
             speed_variance = random.uniform(-0.15, 0.15) if random.randint(0, 25) == 0 else 0
             self.rect.x += (self.speed + speed_variance) * self.direction
-        
-        # Check patrol bounds only if NOT tracking
-        if not self.tracking_mode:
+
+        # Check patrol bounds only if NOT tracking (and not in stay_on_platform mode)
+        if not self.tracking_mode and not self.stay_on_platform:
             self.speed = self.base_speed  # Reset to normal speed
-            
+
             if self.direction == -1 and self.rect.left <= self.patrol_left:
                 old_centerx = self.rect.centerx
                 self.direction = 1
