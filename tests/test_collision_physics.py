@@ -11,8 +11,8 @@ import os
 # Add parent directory to path so we can import our modules
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import collision_physics as collision
-import constants as C
+from src.core import collision_physics as collision
+from src.core import constants as C
 
 
 # Mock classes for testing

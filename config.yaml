@@ -108,6 +108,7 @@ projectiles:
 # === DEBUG SETTINGS ===
 debug:
   show_hitboxes: false
+  show_coordinates: false  # Show x/y coordinates for player and platforms
   unlock_all_levels: true
   invincibility: false
   show_enemies: true

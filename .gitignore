@@ -1,4 +1,33 @@
 venv/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 .DS_Store
+*.bak
+*.bak2
+*_backup.py
+*_old.py
+
+# PyInstaller
+build/
+dist/
+*.spec
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.Spotlight-V100
+.Trashes
+
+# Game saves (for testing)
+.siena_snowy_adventure/
+
+# pytest
+.pytest_cache/
+*.egg-info/

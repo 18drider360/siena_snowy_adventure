@@ -1,13 +1,13 @@
 import pygame
-from utils import settings as S
-from ui.winter_theme import Snowflake, WinterTheme
+from src.utils import settings as S
+from src.ui.winter_theme import Snowflake, WinterTheme
 
 class TitleScreen:
     """Main title screen with Mario Bros-style presentation"""
     
     def __init__(self):
         # Menu options
-        self.options = ["START GAME", "LEVEL SELECTION", "SCOREBOARD", "CONTROLS"]
+        self.options = ["STORY MODE", "LEVEL SELECTION", "SCOREBOARD", "GUIDE"]
         self.selected_index = 0
 
         # Settings icon state
@@ -574,34 +574,187 @@ class LevelSelectScreen:
         screen.blit(hint, hint_rect)
 
 
-class ControlsScreen:
-    """Controls/instructions screen with winter theme"""
+class GuideScreen:
+    """Comprehensive guide screen with game information, controls, and tips"""
 
     def __init__(self):
         try:
             self.title_font = pygame.font.Font("assets/fonts/PressStart2P-Regular.ttf", 36)
-            self.text_font = pygame.font.Font("assets/fonts/PressStart2P-Regular.ttf", 16)
-            self.small_font = pygame.font.Font("assets/fonts/PressStart2P-Regular.ttf", 14)
+            self.header_font = pygame.font.Font("assets/fonts/PressStart2P-Regular.ttf", 18)
+            self.text_font = pygame.font.Font("assets/fonts/PressStart2P-Regular.ttf", 14)
+            self.small_font = pygame.font.Font("assets/fonts/PressStart2P-Regular.ttf", 12)
         except:
             self.title_font = pygame.font.Font(None, 56)
-            self.text_font = pygame.font.Font(None, 28)
-            self.small_font = pygame.font.Font(None, 24)
+            self.header_font = pygame.font.Font(None, 28)
+            self.text_font = pygame.font.Font(None, 22)
+            self.small_font = pygame.font.Font(None, 18)
 
         # Snowflakes
         self.snowflakes = [Snowflake(S.WINDOW_WIDTH, S.WINDOW_HEIGHT) for _ in range(60)]
 
+        # Scrolling state
+        self.scroll_offset = 0  # Always resets to 0 when opened
+        self.content_height = 1500  # Adjusted for optimized spacing
+        self.visible_height = 500  # Increased box height
+        self.max_scroll = max(0, self.content_height - self.visible_height)
+
+        # Tab navigation
+        self.active_tab = 0  # Currently selected tab (0-4)
+        self.tab_hover = None  # Track mouse hover over tabs
+
+        # Section offsets (where each section starts in the scrollable content)
+        # Optimized spacing between sections
+        self.section_offsets = [0, 280, 520, 820, 1120]
+        self.section_labels = ["Modes", "Board", "Diff", "Check", "Ctrl"]
+
+        # Back button state
+        self.back_hover = False
+
     def handle_input(self, event):
-        """Handle controls screen input"""
+        """Handle guide screen input with scrolling and tab navigation"""
+        # Tab selection via number keys (1-5)
         if event.type == pygame.KEYDOWN:
-            if event.key in (pygame.K_ESCAPE, pygame.K_RETURN):
+            if event.key in (pygame.K_1, pygame.K_KP1):
+                self.jump_to_section(0)
+                return "navigate"
+            elif event.key in (pygame.K_2, pygame.K_KP2):
+                self.jump_to_section(1)
+                return "navigate"
+            elif event.key in (pygame.K_3, pygame.K_KP3):
+                self.jump_to_section(2)
+                return "navigate"
+            elif event.key in (pygame.K_4, pygame.K_KP4):
+                self.jump_to_section(3)
+                return "navigate"
+            elif event.key in (pygame.K_5, pygame.K_KP5):
+                self.jump_to_section(4)
+                return "navigate"
+            elif event.key in (pygame.K_UP, pygame.K_w):
+                self.scroll_offset -= 30
+                self.scroll_offset = max(0, self.scroll_offset)
+                return "scroll"
+            elif event.key in (pygame.K_DOWN, pygame.K_s):
+                self.scroll_offset += 30
+                self.scroll_offset = min(self.scroll_offset, self.max_scroll)
+                return "scroll"
+            elif event.key in (pygame.K_ESCAPE, pygame.K_RETURN):
                 return "BACK"
+
+        # Mouse wheel scrolling
+        elif event.type == pygame.MOUSEWHEEL:
+            self.scroll_offset -= event.y * 30
+            self.scroll_offset = max(0, min(self.scroll_offset, self.max_scroll))
+            return "scroll"
+
+        # Mouse hover over tabs and back button
+        elif event.type == pygame.MOUSEMOTION:
+            mouse_pos = pygame.mouse.get_pos()
+            scaled_pos = (int(mouse_pos[0] / S.DISPLAY_SCALE),
+                          int(mouse_pos[1] / S.DISPLAY_SCALE))
+            self.tab_hover = self.get_tab_at_pos(scaled_pos)
+            self.back_hover = self.is_back_button_hovered(scaled_pos)
+
+        # Mouse click on tabs or back button
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            # Click anywhere to go back
-            return "BACK"
+            mouse_pos = pygame.mouse.get_pos()
+            scaled_pos = (int(mouse_pos[0] / S.DISPLAY_SCALE),
+                          int(mouse_pos[1] / S.DISPLAY_SCALE))
+
+            # Check back button first
+            if self.is_back_button_hovered(scaled_pos):
+                return "BACK"
+
+            # Then check tabs
+            tab_index = self.get_tab_at_pos(scaled_pos)
+            if tab_index is not None:
+                self.jump_to_section(tab_index)
+                return "navigate"
+
         return None
 
+    def jump_to_section(self, tab_index):
+        """Jump scroll position to show the selected section"""
+        self.active_tab = tab_index
+        self.scroll_offset = self.section_offsets[tab_index]
+        self.scroll_offset = max(0, min(self.scroll_offset, self.max_scroll))
+
+    def get_tab_at_pos(self, pos):
+        """Get the tab index at the given mouse position, or None"""
+        tab_width = 120
+        tab_height = 35
+        tab_spacing = 10
+        total_width = (tab_width * 5) + (tab_spacing * 4)
+        start_x = (S.WINDOW_WIDTH - total_width) // 2
+        tab_y = 95
+
+        for i in range(5):
+            x = start_x + (i * (tab_width + tab_spacing))
+            tab_rect = pygame.Rect(x, tab_y, tab_width, tab_height)
+            if tab_rect.collidepoint(pos):
+                return i
+
+        return None
+
+    def is_back_button_hovered(self, pos):
+        """Check if the back button is hovered"""
+        back_rect = pygame.Rect(20, 20, 100, 40)
+        return back_rect.collidepoint(pos)
+
+    def draw_trophy_icon(self, screen, x, y, size=15):
+        """Draw a simple trophy icon"""
+        # Golden circle
+        pygame.draw.circle(screen, (255, 215, 0), (x, y), size)
+        # Inner detail
+        pygame.draw.circle(screen, (255, 255, 255), (x, y), size - 3)
+        # "1" text
+        font = pygame.font.Font(None, size * 2)
+        text = font.render("1", True, (255, 215, 0))
+        text_rect = text.get_rect(center=(x, y))
+        screen.blit(text, text_rect)
+
+    def draw_bars_icon(self, screen, x, y, size=15):
+        """Draw three stacked bars (difficulty levels)"""
+        bar_colors = [(100, 255, 100), (255, 255, 100), (255, 100, 100)]
+        bar_height = size // 4
+        for i, color in enumerate(bar_colors):
+            bar_y = y - size//2 + i * (bar_height + 2)
+            bar_width = size - (i * 3)  # Decreasing width
+            pygame.draw.rect(screen, color,
+                            (x - bar_width//2, bar_y, bar_width, bar_height))
+
+    def draw_flag_icon(self, screen, x, y, size=15):
+        """Draw a checkpoint flag icon"""
+        # Pole (brown)
+        pygame.draw.rect(screen, (101, 67, 33), (x - 1, y - size, 2, size))
+        # Flag (green)
+        flag_points = [
+            (x, y - size),
+            (x + size, y - size + 5),
+            (x, y - size + 10)
+        ]
+        pygame.draw.polygon(screen, (100, 255, 100), flag_points)
+
+    def draw_controller_icon(self, screen, x, y, size=15):
+        """Draw directional arrows for controls"""
+        arrow_color = (200, 200, 200)
+        # Up arrow
+        pygame.draw.polygon(screen, arrow_color,
+                           [(x, y - size//2), (x - 5, y), (x + 5, y)])
+        # Down arrow
+        pygame.draw.polygon(screen, arrow_color,
+                           [(x, y + size//2), (x - 5, y), (x + 5, y)])
+
+    def draw_multiline_text(self, screen, font, text_lines, color, x, y, line_spacing=18):
+        """Draw multiple lines of text with proper spacing"""
+        current_y = y
+        for line in text_lines:
+            text_surface = font.render(line, True, color)
+            screen.blit(text_surface, (x, current_y))
+            current_y += line_spacing
+        return current_y
+
     def draw(self, screen):
-        """Draw controls screen with winter theme"""
+        """Draw comprehensive guide screen with winter theme"""
         # Update snowflakes
         for snowflake in self.snowflakes:
             snowflake.update()
@@ -617,17 +770,289 @@ class ControlsScreen:
         WinterTheme.draw_snowflake_icon(screen, 100, 80, 25)
         WinterTheme.draw_snowflake_icon(screen, S.WINDOW_WIDTH - 100, 80, 25)
 
+        # Draw back button in top left
+        self.draw_back_button(screen)
+
         # Title with shadow
-        WinterTheme.draw_text_with_shadow(screen, self.title_font, "CONTROLS",
+        WinterTheme.draw_text_with_shadow(screen, self.title_font, "GUIDE",
                                          WinterTheme.SNOW_WHITE, S.WINDOW_WIDTH // 2, 60)
 
-        # Draw control box
-        box_width = 650
-        box_height = 420
+        # Draw tabs
+        self.draw_tabs(screen)
+
+        # Draw main content box (increased height now that bottom text is removed)
+        box_width = 900
+        box_height = 500  # Increased from 460
         box_x = (S.WINDOW_WIDTH - box_width) // 2
-        box_y = 120
+        box_y = 140  # Below tabs
 
         WinterTheme.draw_frosted_box(screen, box_x, box_y, box_width, box_height, 170)
+
+        # Set up clipping to draw only within the box
+        clip_rect = pygame.Rect(box_x, box_y, box_width, box_height)
+        screen.set_clip(clip_rect)
+
+        # Calculate base Y with scroll offset
+        content_y = box_y + 20 - self.scroll_offset
+
+        # Draw all sections with proper spacing
+        self.draw_game_modes_section(screen, box_x, content_y + self.section_offsets[0])
+        self.draw_scoreboard_section(screen, box_x, content_y + self.section_offsets[1])
+        self.draw_difficulty_section(screen, box_x, content_y + self.section_offsets[2])
+        self.draw_checkpoints_section(screen, box_x, content_y + self.section_offsets[3])
+        self.draw_controls_section(screen, box_x, content_y + self.section_offsets[4])
+
+        # Clear clip
+        screen.set_clip(None)
+
+        # Draw scrollbar if needed
+        if self.max_scroll > 0:
+            self.draw_scrollbar(screen, box_x + box_width + 5, box_y, box_height)
+
+    def draw_tabs(self, screen):
+        """Draw navigation tabs at top of guide"""
+        tab_width = 120
+        tab_height = 35
+        tab_spacing = 10
+        total_width = (tab_width * 5) + (tab_spacing * 4)
+        start_x = (S.WINDOW_WIDTH - total_width) // 2
+        tab_y = 95
+
+        # Tab icons (simple indicators)
+        for i in range(5):
+            x = start_x + (i * (tab_width + tab_spacing))
+
+            # Determine if tab is active or hovered
+            is_active = (i == self.active_tab)
+            is_hovered = (i == self.tab_hover)
+
+            # Draw tab box
+            tab_rect = pygame.Rect(x, tab_y, tab_width, tab_height)
+            if is_active:
+                color = (255, 140, 0)  # Orange for active
+                border_color = (255, 200, 100)
+            elif is_hovered:
+                color = (150, 100, 50)  # Lighter brown for hover
+                border_color = (180, 140, 80)
+            else:
+                color = (101, 67, 33)  # Dark brown
+                border_color = (139, 89, 49)
+
+            pygame.draw.rect(screen, color, tab_rect)
+            pygame.draw.rect(screen, border_color, tab_rect, 3)
+
+            # Draw tab label
+            label_text = f"{i+1}. {self.section_labels[i]}"
+            text_color = (255, 255, 255) if is_active else (200, 200, 200)
+            label_surface = self.small_font.render(label_text, True, text_color)
+            label_rect = label_surface.get_rect(center=(x + tab_width//2, tab_y + tab_height//2))
+            screen.blit(label_surface, label_rect)
+
+    def draw_scrollbar(self, screen, x, y, height):
+        """Draw scrollbar to indicate scroll position"""
+        # Background track
+        pygame.draw.rect(screen, (80, 80, 80), (x, y, 8, height))
+
+        # Calculate thumb position and size
+        if self.max_scroll > 0:
+            thumb_height = max(20, int(height * (self.visible_height / self.content_height)))
+            thumb_y = y + int((self.scroll_offset / self.max_scroll) * (height - thumb_height))
+
+            # Thumb
+            pygame.draw.rect(screen, (200, 200, 200), (x, thumb_y, 8, thumb_height))
+            pygame.draw.rect(screen, (255, 255, 255), (x, thumb_y, 8, thumb_height), 1)
+
+    def draw_back_button(self, screen):
+        """Draw back button with arrow in top left"""
+        button_x = 20
+        button_y = 20
+        button_width = 100
+        button_height = 40
+
+        # Button background color (darker if hovered)
+        if self.back_hover:
+            color = (150, 100, 50)
+            border_color = (180, 140, 80)
+        else:
+            color = (101, 67, 33)
+            border_color = (139, 89, 49)
+
+        # Draw button box
+        button_rect = pygame.Rect(button_x, button_y, button_width, button_height)
+        pygame.draw.rect(screen, color, button_rect)
+        pygame.draw.rect(screen, border_color, button_rect, 3)
+
+        # Draw left arrow
+        arrow_x = button_x + 15
+        arrow_y = button_y + button_height // 2
+        arrow_points = [
+            (arrow_x + 10, arrow_y - 8),
+            (arrow_x, arrow_y),
+            (arrow_x + 10, arrow_y + 8)
+        ]
+        pygame.draw.polygon(screen, (255, 255, 255), arrow_points)
+
+        # Draw "Back" text
+        back_text = self.small_font.render("Back", True, (255, 255, 255))
+        text_rect = back_text.get_rect(center=(button_x + 65, button_y + button_height // 2))
+        screen.blit(back_text, text_rect)
+
+    def draw_game_modes_section(self, screen, box_x, y):
+        """Draw Game Modes section"""
+        # Section header with icon
+        WinterTheme.draw_snowflake_icon(screen, box_x + 30, y + 10, 12)
+        header = self.header_font.render("GAME MODES", True, (255, 200, 100))
+        screen.blit(header, (box_x + 50, y))
+
+        y += 30
+
+        # Story Mode
+        subsection = self.text_font.render("Story Mode", True, (180, 220, 255))
+        screen.blit(subsection, (box_x + 30, y))
+        y += 22
+
+        lines = [
+            "Main narrative experience with progressive",
+            "ability unlocks. Start with basic movement,",
+            "unlock Roll after Level 1, and Spin Attack",
+            "before Level 3. Follow Siena's journey to",
+            "reunite with family in Antarctica."
+        ]
+        y = self.draw_multiline_text(screen, self.small_font, lines, WinterTheme.TEXT_DARK, box_x + 30, y, 16)
+
+        y += 10
+
+        # Level Selection
+        subsection = self.text_font.render("Level Selection", True, (180, 220, 255))
+        screen.blit(subsection, (box_x + 30, y))
+        y += 22
+
+        lines = [
+            "Practice individual levels after unlocking",
+            "in Story Mode. Try different difficulties",
+            "or checkpoint settings. Improve scores!"
+        ]
+        self.draw_multiline_text(screen, self.small_font, lines, WinterTheme.TEXT_DARK, box_x + 30, y, 16)
+
+    def draw_scoreboard_section(self, screen, box_x, y):
+        """Draw Scoreboard section"""
+        # Section header with trophy icon
+        self.draw_trophy_icon(screen, box_x + 30, y + 8, 12)
+        header = self.header_font.render("SCOREBOARD", True, (255, 200, 100))
+        screen.blit(header, (box_x + 50, y))
+
+        y += 30
+
+        lines = [
+            "View top 100 scores per level.",
+            "Filter by difficulty: Easy/Medium/Hard",
+            "Filter by checkpoint usage: On/Off",
+            "Scores show: Rank, Name, Time, Coins,",
+            "Difficulty, Checkpoints",
+            "Top 3 players get special highlighting!"
+        ]
+        self.draw_multiline_text(screen, self.small_font, lines, WinterTheme.TEXT_DARK, box_x + 30, y, 16)
+
+    def draw_difficulty_section(self, screen, box_x, y):
+        """Draw Difficulty section"""
+        # Section header with bars icon
+        self.draw_bars_icon(screen, box_x + 30, y + 8, 12)
+        header = self.header_font.render("DIFFICULTY", True, (255, 200, 100))
+        screen.blit(header, (box_x + 50, y))
+
+        y += 30
+
+        # Easy
+        easy = self.text_font.render("Easy Mode", True, (100, 255, 100))
+        screen.blit(easy, (box_x + 30, y))
+        y += 20
+        lines = [
+            "Collect 50-56% of coins to complete.",
+            "Forgiving - perfect for first playthrough."
+        ]
+        y = self.draw_multiline_text(screen, self.small_font, lines, WinterTheme.TEXT_DARK, box_x + 30, y, 16)
+
+        y += 10
+
+        # Medium
+        medium = self.text_font.render("Medium Mode (Default)", True, (255, 255, 100))
+        screen.blit(medium, (box_x + 30, y))
+        y += 20
+        lines = [
+            "Collect 69-75% of coins to complete.",
+            "Balanced challenge for most players."
+        ]
+        y = self.draw_multiline_text(screen, self.small_font, lines, WinterTheme.TEXT_DARK, box_x + 30, y, 16)
+
+        y += 10
+
+        # Hard
+        hard = self.text_font.render("Hard Mode", True, (255, 100, 100))
+        screen.blit(hard, (box_x + 30, y))
+        y += 20
+        lines = [
+            "Collect 89-93% of coins to complete.",
+            "Nearly all coins needed!"
+        ]
+        y = self.draw_multiline_text(screen, self.small_font, lines, WinterTheme.TEXT_DARK, box_x + 30, y, 16)
+
+        y += 5
+        note = self.small_font.render("Change in Settings (gear icon, top-right)", True, (180, 220, 255))
+        screen.blit(note, (box_x + 30, y))
+
+    def draw_checkpoints_section(self, screen, box_x, y):
+        """Draw Checkpoints section"""
+        # Section header with flag icon
+        self.draw_flag_icon(screen, box_x + 30, y + 8, 12)
+        header = self.header_font.render("CHECKPOINTS", True, (255, 200, 100))
+        screen.blit(header, (box_x + 50, y))
+
+        y += 30
+
+        # What
+        what = self.text_font.render("What Are They?", True, (180, 220, 255))
+        screen.blit(what, (box_x + 30, y))
+        y += 20
+        lines = [
+            "Progress markers throughout levels.",
+            "Green flag markers show locations.",
+            "Respawn at last checkpoint if you die."
+        ]
+        y = self.draw_multiline_text(screen, self.small_font, lines, WinterTheme.TEXT_DARK, box_x + 30, y, 16)
+
+        y += 10
+
+        # How
+        how = self.text_font.render("How to Enable:", True, (180, 220, 255))
+        screen.blit(how, (box_x + 30, y))
+        y += 20
+        lines = [
+            "Toggle in Settings (gear icon, top-right)",
+            "OFF by default - must opt-in.",
+            "Setting persists across sessions."
+        ]
+        y = self.draw_multiline_text(screen, self.small_font, lines, WinterTheme.TEXT_DARK, box_x + 30, y, 16)
+
+        y += 10
+
+        # Impact
+        impact = self.text_font.render("Scoreboard Impact:", True, (255, 100, 100))
+        screen.blit(impact, (box_x + 30, y))
+        y += 20
+        lines = [
+            "Checkpoint usage IS displayed!",
+            "Allows fair comparison between players."
+        ]
+        self.draw_multiline_text(screen, self.small_font, lines, WinterTheme.TEXT_DARK, box_x + 30, y, 16)
+
+    def draw_controls_section(self, screen, box_x, y):
+        """Draw Controls section (adapted from original)"""
+        # Section header with controller icon
+        self.draw_controller_icon(screen, box_x + 30, y + 8, 12)
+        header = self.header_font.render("CONTROLS", True, (255, 200, 100))
+        screen.blit(header, (box_x + 50, y))
+
+        y += 35
 
         # Controls list
         controls = [
@@ -639,26 +1064,18 @@ class ControlsScreen:
             ("RESTART", "Shift + Enter"),
         ]
 
-        y_start = box_y + 60
-        y_spacing = 55
-
-        for i, (action, keys) in enumerate(controls):
-            y = y_start + (i * y_spacing)
-
+        for action, keys in controls:
             # Action name (left side)
             action_text = self.text_font.render(action, True, (255, 200, 100))
-            action_rect = action_text.get_rect(right=S.WINDOW_WIDTH // 2 - 30, centery=y)
+            action_rect = action_text.get_rect(right=box_x + 400, centery=y)
             screen.blit(action_text, action_rect)
 
             # Divider
-            pygame.draw.circle(screen, WinterTheme.GLOW_BLUE, (S.WINDOW_WIDTH // 2, y), 5)
+            pygame.draw.circle(screen, WinterTheme.GLOW_BLUE, (box_x + 420, y), 4)
 
             # Keys (right side)
             keys_text = self.text_font.render(keys, True, WinterTheme.TEXT_DARK)
-            keys_rect = keys_text.get_rect(left=S.WINDOW_WIDTH // 2 + 30, centery=y)
+            keys_rect = keys_text.get_rect(left=box_x + 440, centery=y)
             screen.blit(keys_text, keys_rect)
 
-        # Back instruction
-        back_text = self.small_font.render("ESC / ENTER : BACK", True, WinterTheme.ICE_BLUE)
-        back_rect = back_text.get_rect(center=(S.WINDOW_WIDTH // 2, S.WINDOW_HEIGHT - 40))
-        screen.blit(back_text, back_rect)
+            y += 28
