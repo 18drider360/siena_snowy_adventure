@@ -33,6 +33,8 @@ from src.rendering.rendering import (
     draw_northern_lights_ground, draw_snowy_ground, draw_wooden_platform,
     draw_death_screen, draw_game_hud, draw_debug_coordinates
 )
+from src.rendering.particles import ParticleManager
+from src.rendering.screen_shake import ScreenShake, apply_preset
 
 logger = get_logger(__name__)
 
@@ -99,7 +101,11 @@ def main(progression):
     # --- MENU SYSTEMS ---
     pause_menu = PauseMenu()
     death_menu = DeathMenu()
-    
+
+    # --- PARTICLE SYSTEM & SCREEN SHAKE ---
+    particle_mgr = ParticleManager()
+    screen_shake = ScreenShake()
+
     # --- GAME STATS ---
     coins_collected = 0
     level_time = 0  # Time in frames (divide by 60 for seconds)
@@ -238,6 +244,12 @@ def main(progression):
             keys = pygame.key.get_pressed()
 
             player.update(keys)
+
+            # --- UPDATE PARTICLE SYSTEM ---
+            particle_mgr.update()
+
+            # --- UPDATE SCREEN SHAKE ---
+            screen_shake.update()
 
             # --- CHECK CHECKPOINTS ---
             if progression.checkpoints_enabled:
@@ -599,7 +611,26 @@ def main(progression):
                                 # Enemy is vulnerable to stomp - deal damage to enemy
                                 enemy.take_damage(1)
                                 player.vel_y = -15  # Always bounce player up on stomp
-                                
+
+                                # Visual feedback: particles and screen shake
+                                particle_mgr.spawn_burst(
+                                    enemy.rect.centerx,
+                                    enemy.rect.top,
+                                    count=10,
+                                    particle_type='hit'
+                                )
+                                apply_preset(screen_shake, 'stomp_enemy')
+
+                                # Check if enemy is defeated
+                                if enemy.health <= 0:
+                                    particle_mgr.spawn_enemy_defeat(
+                                        enemy.rect.x,
+                                        enemy.rect.y,
+                                        enemy.rect.width,
+                                        enemy.rect.height
+                                    )
+                                    apply_preset(screen_shake, 'enemy_defeat')
+
                                 # Play appropriate stomp sound
                                 if ENABLE_SOUND:
                                     # Check if enemy is a slime
@@ -614,6 +645,15 @@ def main(progression):
                                 if not player.invincible and not DEBUG_INVINCIBILITY:
                                     knockback_direction = 1 if player.rect.centerx < enemy.rect.centerx else -1
                                     player.take_damage(1, knockback_direction)
+
+                                    # Visual feedback for taking damage
+                                    particle_mgr.spawn_hit_effect(
+                                        player.rect.centerx,
+                                        player.rect.centery,
+                                        knockback_direction
+                                    )
+                                    apply_preset(screen_shake, 'take_damage')
+
                                     if ENABLE_SOUND:
                                         audio_manager.play_sound('bump')
 
@@ -623,6 +663,15 @@ def main(progression):
                             if not player.invincible and not player.is_spinning and not DEBUG_INVINCIBILITY:
                                 knockback_direction = 1 if player.rect.centerx < enemy.rect.centerx else -1
                                 player.take_damage(1, knockback_direction)
+
+                                # Visual feedback for taking damage
+                                particle_mgr.spawn_hit_effect(
+                                    player.rect.centerx,
+                                    player.rect.centery,
+                                    knockback_direction
+                                )
+                                apply_preset(screen_shake, 'take_damage')
+
                                 if ENABLE_SOUND:
                                     audio_manager.play_sound('bump')
                     
@@ -633,6 +682,15 @@ def main(progression):
                             if not player.invincible and not player.is_spinning and not DEBUG_INVINCIBILITY:
                                 knockback_direction = 1 if player.rect.centerx < enemy.rect.centerx else -1
                                 player.take_damage(1, knockback_direction)
+
+                                # Visual feedback for sword hit
+                                particle_mgr.spawn_hit_effect(
+                                    player.rect.centerx,
+                                    player.rect.centery,
+                                    knockback_direction
+                                )
+                                apply_preset(screen_shake, 'take_damage')
+
                                 if ENABLE_SOUND:
                                     audio_manager.play_sound('bump')
 
@@ -644,6 +702,15 @@ def main(progression):
                                 damage = getattr(enemy, 'punch_damage', 1)
                                 knockback_direction = 1 if player.rect.centerx < enemy.rect.centerx else -1
                                 player.take_damage(damage, knockback_direction)
+
+                                # Visual feedback for punch hit
+                                particle_mgr.spawn_hit_effect(
+                                    player.rect.centerx,
+                                    player.rect.centery,
+                                    knockback_direction
+                                )
+                                apply_preset(screen_shake, 'take_damage')
+
                                 if ENABLE_SOUND:
                                     audio_manager.play_sound('bump')
             
@@ -656,9 +723,26 @@ def main(progression):
                             # Knockback away from projectile
                             knockback_direction = 1 if player.rect.centerx < projectile.rect.centerx else -1
                             player.take_damage(1, knockback_direction)
+
+                            # Visual feedback for projectile hit
+                            particle_mgr.spawn_hit_effect(
+                                player.rect.centerx,
+                                player.rect.centery,
+                                knockback_direction
+                            )
+                            apply_preset(screen_shake, 'take_damage')
+
                             if ENABLE_SOUND:
                                 audio_manager.play_sound('bump')
+
                         # Always destroy the projectile on contact (even during spin)
+                        # Add particle burst when projectile is destroyed
+                        particle_mgr.spawn_burst(
+                            projectile.rect.centerx,
+                            projectile.rect.centery,
+                            count=6,
+                            particle_type='snow'
+                        )
                         projectile.kill()
             
             # --- COIN COLLECTION ---
@@ -666,6 +750,10 @@ def main(progression):
                 if player.hitbox.colliderect(coin.hitbox):
                     coin.collect()
                     coins_collected += 1
+
+                    # Visual feedback: sparkle ring
+                    particle_mgr.spawn_coin_sparkles(coin.rect.centerx, coin.rect.centery)
+
                     if ENABLE_SOUND:
                         audio_manager.play_sound('coin')
 
@@ -1026,6 +1114,9 @@ def main(progression):
         if SHOW_COORDINATES:
             draw_debug_coordinates(screen, player, platforms, camera_x, 0)
 
+        # --- DRAW PARTICLES ---
+        particle_mgr.draw(screen, camera_x)
+
         # --- DRAW UI ---
         health_ui.draw(screen, player.health, player.max_health)
         roll_stamina_ui.draw(screen, player, camera_x)
@@ -1075,7 +1166,12 @@ def main(progression):
 
         # Scale render surface to display screen
         scaled_surface = pygame.transform.scale(screen, (display_width, display_height))
-        display_screen.blit(scaled_surface, (0, 0))
+
+        # Apply screen shake offset
+        shake_x, shake_y = screen_shake.get_offset()
+        display_screen.fill((0, 0, 0))  # Clear with black in case shake leaves gaps
+        display_screen.blit(scaled_surface, (shake_x, shake_y))
+
         pygame.display.flip()
 
     pygame.quit()

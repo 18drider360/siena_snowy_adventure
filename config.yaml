@@ -93,7 +93,7 @@ level:
   default_height: 600
   default_ground_y: 570
   default_ground_height: 30
-  camera_offset_x: 300  # Player offset from left edge
+  camera_offset_x: 225  # Player offset from left edge (reduced from 300 for better forward visibility)
 
 # === DEATH & RESPAWN SETTINGS ===
 death:
