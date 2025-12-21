@@ -4,7 +4,7 @@ from src.ui.winter_theme import Snowflake, WinterTheme
 
 class TitleScreen:
     """Main title screen with Mario Bros-style presentation"""
-    
+
     def __init__(self):
         # Menu options
         self.options = ["STORY MODE", "LEVEL SELECTION", "SCOREBOARD", "GUIDE"]
@@ -12,6 +12,15 @@ class TitleScreen:
 
         # Settings icon state
         self.settings_hover = False
+
+        # Load select sound
+        self.select_sound = None
+        if S.MASTER_AUDIO_ENABLED:
+            try:
+                self.select_sound = pygame.mixer.Sound("assets/sounds/select.wav")
+                self.select_sound.set_volume(0.4)
+            except (FileNotFoundError, pygame.error):
+                pass  # Sound optional
 
         # Load fonts
         try:
@@ -32,6 +41,14 @@ class TitleScreen:
         self.sign_border = (101, 67, 33)  # Dark brown
         self.sign_text = (255, 228, 196)  # Bisque
         self.sign_shadow = (80, 50, 20)  # Very dark brown
+
+    def play_select_sound(self):
+        """Play the select sound effect"""
+        if self.select_sound:
+            try:
+                self.select_sound.play()
+            except pygame.error:
+                pass
 
     def get_settings_icon_rect(self):
         """Get the rect for the settings gear icon in top right corner"""
@@ -71,6 +88,7 @@ class TitleScreen:
                 return "navigate"
 
             elif event.key == pygame.K_RETURN:
+                self.play_select_sound()
                 return self.options[self.selected_index]
 
         elif event.type == pygame.MOUSEMOTION:
@@ -94,11 +112,13 @@ class TitleScreen:
             # Check settings icon click
             settings_rect = self.get_settings_icon_rect()
             if settings_rect.collidepoint(scaled_pos):
+                self.play_select_sound()
                 return "SETTINGS"
 
             clicked_option = self.get_option_at_pos(scaled_pos)
             if clicked_option is not None:
                 self.selected_index = clicked_option
+                self.play_select_sound()
                 return self.options[self.selected_index]
 
         return None
@@ -453,6 +473,23 @@ class LevelSelectScreen:
         # Snowflakes
         self.snowflakes = [Snowflake(S.WINDOW_WIDTH, S.WINDOW_HEIGHT) for _ in range(60)]
 
+        # Load select sound
+        self.select_sound = None
+        if S.MASTER_AUDIO_ENABLED:
+            try:
+                self.select_sound = pygame.mixer.Sound("assets/sounds/select.wav")
+                self.select_sound.set_volume(0.4)
+            except (FileNotFoundError, pygame.error):
+                pass
+
+    def play_select_sound(self):
+        """Play the select sound effect"""
+        if self.select_sound:
+            try:
+                self.select_sound.play()
+            except pygame.error:
+                pass
+
     def handle_input(self, event):
         """Handle level selection input (keyboard and mouse)"""
         if event.type == pygame.KEYDOWN:
@@ -467,9 +504,11 @@ class LevelSelectScreen:
                 return "navigate"
 
             elif event.key == pygame.K_RETURN:
+                self.play_select_sound()
                 return f"LEVEL_{self.selected_level}"
 
             elif event.key == pygame.K_ESCAPE:
+                self.play_select_sound()
                 return "BACK"
 
         elif event.type == pygame.MOUSEMOTION:
@@ -487,6 +526,7 @@ class LevelSelectScreen:
             level = self.get_level_at_pos(scaled_pos)
             if level is not None:
                 self.selected_level = level
+                self.play_select_sound()
                 return f"LEVEL_{self.selected_level}"
 
         return None
@@ -592,6 +632,15 @@ class GuideScreen:
         # Snowflakes
         self.snowflakes = [Snowflake(S.WINDOW_WIDTH, S.WINDOW_HEIGHT) for _ in range(60)]
 
+        # Load select sound
+        self.select_sound = None
+        if S.MASTER_AUDIO_ENABLED:
+            try:
+                self.select_sound = pygame.mixer.Sound("assets/sounds/select.wav")
+                self.select_sound.set_volume(0.4)
+            except (FileNotFoundError, pygame.error):
+                pass
+
         # Scrolling state
         self.scroll_offset = 0  # Always resets to 0 when opened
         self.content_height = 1500  # Adjusted for optimized spacing
@@ -609,6 +658,14 @@ class GuideScreen:
 
         # Back button state
         self.back_hover = False
+
+    def play_select_sound(self):
+        """Play the select sound effect"""
+        if self.select_sound:
+            try:
+                self.select_sound.play()
+            except pygame.error:
+                pass
 
     def handle_input(self, event):
         """Handle guide screen input with scrolling and tab navigation"""
@@ -638,6 +695,7 @@ class GuideScreen:
                 self.scroll_offset = min(self.scroll_offset, self.max_scroll)
                 return "scroll"
             elif event.key in (pygame.K_ESCAPE, pygame.K_RETURN):
+                self.play_select_sound()
                 return "BACK"
 
         # Mouse wheel scrolling

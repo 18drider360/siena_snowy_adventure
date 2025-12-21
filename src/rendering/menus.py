@@ -17,6 +17,15 @@ class PauseMenu:
             self.title_font = pygame.font.Font(None, 56)
             self.menu_font = pygame.font.Font(None, 40)
 
+        # Load select sound
+        self.select_sound = None
+        if S.MASTER_AUDIO_ENABLED:
+            try:
+                self.select_sound = pygame.mixer.Sound("assets/sounds/select.wav")
+                self.select_sound.set_volume(0.4)
+            except (FileNotFoundError, pygame.error):
+                pass
+
         # Animation
         self.blink_timer = 0
         self.show_cursor = True
@@ -45,6 +54,14 @@ class PauseMenu:
 
         return None
 
+    def play_select_sound(self):
+        """Play the select sound effect"""
+        if self.select_sound:
+            try:
+                self.select_sound.play()
+            except pygame.error:
+                pass
+
     def handle_input(self, event):
         """Handle keyboard and mouse input for menu navigation"""
         if event.type == pygame.KEYDOWN:
@@ -57,6 +74,7 @@ class PauseMenu:
                 return "navigate"
 
             elif event.key == pygame.K_RETURN:
+                self.play_select_sound()
                 return self.options[self.selected_index]
 
             # ESC handling removed - now handled in main.py
@@ -76,6 +94,7 @@ class PauseMenu:
             clicked_option = self.get_option_at_pos(scaled_pos)
             if clicked_option is not None:
                 self.selected_index = clicked_option
+                self.play_select_sound()
                 return self.options[self.selected_index]
 
         return None
@@ -179,6 +198,15 @@ class DeathMenu:
             self.title_font = pygame.font.Font(None, 72)
             self.menu_font = pygame.font.Font(None, 40)
 
+        # Load select sound
+        self.select_sound = None
+        if S.MASTER_AUDIO_ENABLED:
+            try:
+                self.select_sound = pygame.mixer.Sound("assets/sounds/select.wav")
+                self.select_sound.set_volume(0.4)
+            except (FileNotFoundError, pygame.error):
+                pass
+
         # Animation
         self.blink_timer = 0
         self.show_cursor = True
@@ -212,6 +240,14 @@ class DeathMenu:
 
         return None
 
+    def play_select_sound(self):
+        """Play the select sound effect"""
+        if self.select_sound:
+            try:
+                self.select_sound.play()
+            except pygame.error:
+                pass
+
     def handle_input(self, event):
         """Handle keyboard and mouse input for menu navigation"""
         if event.type == pygame.KEYDOWN:
@@ -224,6 +260,7 @@ class DeathMenu:
                 return "navigate"
 
             elif event.key == pygame.K_RETURN:
+                self.play_select_sound()
                 return self.options[self.selected_index]
 
         elif event.type == pygame.MOUSEMOTION:
@@ -241,6 +278,7 @@ class DeathMenu:
             clicked_option = self.get_option_at_pos(scaled_pos)
             if clicked_option is not None:
                 self.selected_index = clicked_option
+                self.play_select_sound()
                 return self.options[self.selected_index]
 
         return None

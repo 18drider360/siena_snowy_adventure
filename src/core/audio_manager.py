@@ -59,7 +59,7 @@ class AudioManager:
             sound_names = [
                 'death', 'stage_clear', 'jump', 'double_jump',
                 'coin', 'bump', 'land_enemy', 'land_slime',
-                'enemy_projectile', 'spin_attack'
+                'enemy_projectile', 'spin_attack', 'select', 'roll'
             ]
             for name in sound_names:
                 self.sounds[name] = None
@@ -72,11 +72,13 @@ class AudioManager:
             'jump': (["assets/sounds/jump.ogg"], 0.4),
             'double_jump': (["assets/sounds/double_jump.ogg"], 0.4),
             'coin': (["assets/sounds/coin.ogg"], 0.2),
-            'bump': (["assets/sounds/bump.ogg"], 0.2),
+            'bump': (["assets/sounds/bump.ogg"], 0.3),
             'land_enemy': (["assets/sounds/land_enemy.ogg"], 0.3),
             'land_slime': (["assets/sounds/land_slime.ogg"], 0.3),
             'enemy_projectile': (["assets/sounds/enemy_projectile.ogg"], 0.2),
             'spin_attack': (["assets/sounds/spin_attack.ogg"], 0.3),
+            'select': (["assets/sounds/select.wav"], 0.4),
+            'roll': (["assets/sounds/roll.wav"], 0.15),  # Quiet for looping
         }
 
         # Load each sound
@@ -146,28 +148,45 @@ class AudioManager:
             except Exception as e:
                 print(f"Could not unpause music: {e}")
 
-    def play_sound(self, sound_name):
+    def play_sound(self, sound_name, loops=0):
         """
         Play a sound effect by name
 
         Args:
             sound_name: Name of the sound to play (e.g., 'jump', 'coin', 'death')
+            loops: Number of times to loop (-1 for infinite, 0 for once)
 
         Returns:
-            bool: True if sound played successfully, False otherwise
+            pygame.mixer.Channel or None: The channel the sound is playing on, or None if failed
         """
         if not self.enable_sound:
-            return False
+            return None
 
         sound = self.sounds.get(sound_name)
         if sound:
             try:
-                sound.play()
-                return True
+                return sound.play(loops=loops)
             except Exception as e:
                 print(f"Could not play sound '{sound_name}': {e}")
-                return False
-        return False
+                return None
+        return None
+
+    def stop_sound(self, sound_name):
+        """
+        Stop a currently playing sound effect by name
+
+        Args:
+            sound_name: Name of the sound to stop
+        """
+        if not self.enable_sound:
+            return
+
+        sound = self.sounds.get(sound_name)
+        if sound:
+            try:
+                sound.stop()
+            except Exception as e:
+                print(f"Could not stop sound '{sound_name}': {e}")
 
     def get_sound(self, sound_name):
         """

@@ -153,6 +153,9 @@ def main(progression):
 
     camera_x = 0
 
+    # --- ROLL SOUND TRACKING ---
+    roll_sound_channel = None  # Track if roll sound is playing
+
     # --- GAME LOOP ---
     running = True
     while running:
@@ -244,6 +247,19 @@ def main(progression):
             keys = pygame.key.get_pressed()
 
             player.update(keys)
+
+            # --- ROLL SOUND HANDLING ---
+            if player.is_rolling:
+                # Start roll sound if not already playing
+                if roll_sound_channel is None or not roll_sound_channel.get_busy():
+                    if ENABLE_SOUND:
+                        roll_sound_channel = audio_manager.play_sound('roll', loops=-1)  # Loop infinitely
+            else:
+                # Stop roll sound when not rolling
+                if roll_sound_channel is not None and roll_sound_channel.get_busy():
+                    if ENABLE_SOUND:
+                        audio_manager.stop_sound('roll')
+                    roll_sound_channel = None
 
             # --- UPDATE PARTICLE SYSTEM ---
             particle_mgr.update()
