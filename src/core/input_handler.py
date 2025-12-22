@@ -89,6 +89,9 @@ class InputHandler:
 
     def _handle_escape(self, game_state, audio_manager):
         """Handle ESC key press"""
+        # Play click sound for Escape key
+        audio_manager.play_sound('select_click', volume=0.3)
+
         if not game_state.game_over and not game_state.cutscene_active:
             game_state.toggle_pause()
             if game_state.paused:

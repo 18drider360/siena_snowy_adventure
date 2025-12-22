@@ -1,0 +1,33 @@
+{
+  "rules": {
+    "leaderboards": {
+      "$level": {
+        ".read": true,
+        ".write": true,
+        ".indexOn": ["time", "coins"],
+        "$scoreId": {
+          ".validate": "newData.hasChildren(['username', 'time', 'coins', 'difficulty', 'checkpoints', 'timestamp']) &&
+                       newData.child('username').isString() &&
+                       newData.child('username').val().length >= 1 &&
+                       newData.child('username').val().length <= 20 &&
+                       newData.child('time').isNumber() &&
+                       newData.child('time').val() >= 1800 &&
+                       newData.child('time').val() <= 216000 &&
+                       newData.child('coins').isNumber() &&
+                       newData.child('coins').val() >= 0 &&
+                       newData.child('coins').val() <= 100 &&
+                       newData.child('difficulty').isString() &&
+                       (newData.child('difficulty').val() == 'Easy' ||
+                        newData.child('difficulty').val() == 'Medium' ||
+                        newData.child('difficulty').val() == 'Hard') &&
+                       newData.child('checkpoints').isBoolean() &&
+                       newData.child('timestamp').isNumber()"
+        }
+      }
+    },
+    "version": {
+      ".read": true,
+      ".write": false
+    }
+  }
+}

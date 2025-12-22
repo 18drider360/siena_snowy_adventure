@@ -1,6 +1,18 @@
 # main.py
 import sys
+import os
 import pygame
+
+from dotenv import load_dotenv
+
+# Load environment variables from .env
+# Handle PyInstaller bundled apps - look in _MEIPASS directory
+if hasattr(sys, '_MEIPASS'):
+    # PyInstaller bundles files in _MEIPASS temporary directory
+    env_path = os.path.join(sys._MEIPASS, '.env')
+    load_dotenv(env_path)
+else:
+    load_dotenv()  # Load from current directory
 
 # Core systems
 from src.core.game_logging import get_logger
@@ -156,6 +168,9 @@ def main(progression):
     # --- ROLL SOUND TRACKING ---
     roll_sound_channel = None  # Track if roll sound is playing
 
+    # --- LEVEL COMPLETE BUTTON TRACKING ---
+    previous_cutscene_button = "continue"  # Track for hover sound
+
     # --- GAME LOOP ---
     running = True
     while running:
@@ -252,12 +267,12 @@ def main(progression):
             if player.is_rolling:
                 # Start roll sound if not already playing
                 if roll_sound_channel is None or not roll_sound_channel.get_busy():
-                    if ENABLE_SOUND:
+                    if ENABLE_SOUND and not DISABLE_ALL_AUDIO:
                         roll_sound_channel = audio_manager.play_sound('roll', loops=-1)  # Loop infinitely
             else:
                 # Stop roll sound when not rolling
                 if roll_sound_channel is not None and roll_sound_channel.get_busy():
-                    if ENABLE_SOUND:
+                    if ENABLE_SOUND and not DISABLE_ALL_AUDIO:
                         audio_manager.stop_sound('roll')
                     roll_sound_channel = None
 
@@ -562,6 +577,25 @@ def main(progression):
                                 if enemy.take_damage(1):
                                     # Optional: slight bounce for player on successful hit
                                     player.vel_y = -8
+
+                                    # Visual feedback: particles and screen shake
+                                    particle_mgr.spawn_burst(
+                                        enemy.rect.centerx,
+                                        enemy.rect.centery,
+                                        count=10,
+                                        particle_type='hit'
+                                    )
+                                    apply_preset(screen_shake, 'stomp_enemy')
+
+                                    # Check if enemy is defeated
+                                    if enemy.health <= 0:
+                                        particle_mgr.spawn_enemy_defeat(
+                                            enemy.rect.x,
+                                            enemy.rect.y,
+                                            enemy.rect.width,
+                                            enemy.rect.height
+                                        )
+                                        apply_preset(screen_shake, 'enemy_defeat')
                             else:
                                 # Enemy is NOT vulnerable to spin attack - player takes damage
                                 if not player.invincible and not DEBUG_INVINCIBILITY:
@@ -579,6 +613,25 @@ def main(progression):
                                     # Apply knockback velocity to enemy (push away from player)
                                     knockback_direction = 1 if player.rect.centerx < enemy.rect.centerx else -1
                                     enemy.knockback_velocity = knockback_direction * 20
+
+                                    # Visual feedback: particles and screen shake
+                                    particle_mgr.spawn_burst(
+                                        enemy.rect.centerx,
+                                        enemy.rect.centery,
+                                        count=10,
+                                        particle_type='hit'
+                                    )
+                                    apply_preset(screen_shake, 'stomp_enemy')
+
+                                    # Check if enemy is defeated
+                                    if enemy.health <= 0:
+                                        particle_mgr.spawn_enemy_defeat(
+                                            enemy.rect.x,
+                                            enemy.rect.y,
+                                            enemy.rect.width,
+                                            enemy.rect.height
+                                        )
+                                        apply_preset(screen_shake, 'enemy_defeat')
 
                                     # Stop player's roll immediately and prevent re-rolling
                                     player.is_rolling = False
@@ -804,9 +857,19 @@ def main(progression):
             scaled_mouse_pos = (scaled_mouse_x, scaled_mouse_y)
 
             if continue_rect.collidepoint(scaled_mouse_pos):
+                # Play sound when hovering over a new button
+                if game_state.cutscene_selected_button != "continue" and previous_cutscene_button != "continue":
+                    if ENABLE_SOUND and not DISABLE_ALL_AUDIO:
+                        audio_manager.play_sound('select', volume=0.08)  # Very quiet hover sound
                 game_state.cutscene_selected_button = "continue"
+                previous_cutscene_button = "continue"
             elif menu_rect.collidepoint(scaled_mouse_pos):
+                # Play sound when hovering over a new button
+                if game_state.cutscene_selected_button != "menu" and previous_cutscene_button != "menu":
+                    if ENABLE_SOUND and not DISABLE_ALL_AUDIO:
+                        audio_manager.play_sound('select', volume=0.08)  # Very quiet hover sound
                 game_state.cutscene_selected_button = "menu"
+                previous_cutscene_button = "menu"
 
             # Handle cutscene button navigation and selection
             for event in pygame.event.get():
@@ -817,8 +880,14 @@ def main(progression):
                         # Toggle between buttons
                         old_button = game_state.cutscene_selected_button
                         game_state.cutscene_selected_button = "menu" if game_state.cutscene_selected_button == "continue" else "continue"
+                        # Play hover sound for arrow key navigation
+                        if ENABLE_SOUND and not DISABLE_ALL_AUDIO:
+                            audio_manager.play_sound('select', volume=0.08)
                         print(f"Arrow key pressed: {old_button} -> {game_state.cutscene_selected_button}")
                     elif event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
+                        # Play select sound
+                        if ENABLE_SOUND and not DISABLE_ALL_AUDIO:
+                            audio_manager.play_sound('select_click', volume=0.3)  # Higher-pitched click sound
                         # Activate selected button
                         if game_state.cutscene_selected_button == "continue":
                             # Check if there's a next level
@@ -840,6 +909,9 @@ def main(progression):
                     scaled_mouse_pos = (scaled_mouse_x, scaled_mouse_y)
 
                     if continue_rect.collidepoint(scaled_mouse_pos):
+                        # Play select sound
+                        if ENABLE_SOUND and not DISABLE_ALL_AUDIO:
+                            audio_manager.play_sound('select_click', volume=0.3)  # Higher-pitched click sound
                         # Clicked continue button
                         next_level = progression.current_level + 1
                         if next_level in LevelManager.LEVELS:
@@ -848,6 +920,9 @@ def main(progression):
                         else:
                             return "LEVEL_COMPLETE"
                     elif menu_rect.collidepoint(scaled_mouse_pos):
+                        # Play select sound
+                        if ENABLE_SOUND and not DISABLE_ALL_AUDIO:
+                            audio_manager.play_sound('select_click', volume=0.3)  # Higher-pitched click sound
                         # Clicked menu button
                         return "MENU"
         elif game_state.game_over:

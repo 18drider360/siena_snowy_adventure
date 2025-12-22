@@ -820,7 +820,7 @@ from src.ui.health_display import HealthDisplay
 from src.ui.enemy_health_display import EnemyHealthDisplay
 from src.ui.spin_charge_display import SpinChargeDisplay
 from src.ui.roll_stamina_display import RollStaminaDisplay
-from title_screen import TitleScreen, LevelSelectScreen, GuideScreen
+from src.rendering.screens.title_screen import TitleScreen, LevelSelectScreen, GuideScreen
 from src.rendering.menus import PauseMenu, DeathMenu
 from src.core.audio_manager import AudioManager
 

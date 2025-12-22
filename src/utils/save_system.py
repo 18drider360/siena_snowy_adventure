@@ -163,7 +163,7 @@ class SaveSystem:
     @staticmethod
     def submit_score(username, level_num, time_taken, coins_collected, difficulty="Medium", checkpoints_enabled=False):
         """
-        Submit a score to the scoreboard
+        Submit a score to the scoreboard (local and online)
 
         Args:
             username: Player's username
@@ -209,6 +209,25 @@ class SaveSystem:
             # Save scoreboard
             with open(SaveSystem.SCOREBOARD_FILE, 'w') as f:
                 json.dump(scoreboard, f, indent=2)
+
+            # Also submit to online leaderboard (if available) - using secure REST API
+            try:
+                from src.utils.secure_leaderboard import get_secure_leaderboard
+                online_lb = get_secure_leaderboard()
+                if online_lb.is_available():
+                    online_success = online_lb.submit_score(level_num, username, time_taken,
+                                                            coins_collected, difficulty, checkpoints_enabled)
+                    if online_success:
+                        print(f"🌐 Score submitted to online leaderboard!")
+                    else:
+                        print(f"⚠️ Online score submission failed (check network connection)")
+                else:
+                    print(f"ℹ️ Online leaderboard not available (offline mode)")
+            except Exception as e:
+                # Don't fail local save if online fails
+                print(f"⚠️ Online leaderboard error: {type(e).__name__}: {e}")
+                import traceback
+                traceback.print_exc()
 
             return True
 

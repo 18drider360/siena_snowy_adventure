@@ -5,8 +5,10 @@ Shows high scores for each level with beautiful winter theme
 
 import pygame
 import random
+import threading
 from src.utils.save_system import SaveSystem
 from src.utils.progression import LevelManager
+from src.utils.secure_leaderboard import get_secure_leaderboard
 
 
 class Snowflake:
@@ -44,6 +46,19 @@ class ScoreboardScreen:
         self.current_checkpoints = 0  # Index into checkpoints_filter list (0 = "All")
         self.scroll_offset = 0  # Track scroll position for viewing more than 10 scores
 
+        # Online leaderboard integration (using secure REST API)
+        self.online_leaderboard = get_secure_leaderboard()
+        self.is_online_available = self.online_leaderboard.is_available()
+        # Default to online if available, otherwise local
+        self.view_mode = "online" if self.is_online_available else "local"
+        self.online_scores = []
+        self.loading_online = False
+        self.loading_spinner_angle = 0
+
+        # Load online scores immediately if starting in online mode
+        if self.view_mode == "online":
+            self.load_online_scores()
+
         # Wintery color palette
         self.bg_gradient_top = (15, 30, 60)
         self.bg_gradient_bottom = (40, 70, 120)
@@ -73,6 +88,37 @@ class ScoreboardScreen:
         screen_width = screen.get_width()
         screen_height = screen.get_height()
         self.snowflakes = [Snowflake(screen_width, screen_height) for _ in range(80)]
+
+        # Load select sounds (hover and click)
+        from src.utils import settings as S
+        self.select_sound = None
+        self.select_click_sound = None
+        if S.MASTER_AUDIO_ENABLED:
+            try:
+                self.select_sound = pygame.mixer.Sound("assets/sounds/select_fast.wav")
+                self.select_sound.set_volume(0.4)
+            except (FileNotFoundError, pygame.error):
+                pass
+            try:
+                self.select_click_sound = pygame.mixer.Sound("assets/sounds/select_click.wav")
+                self.select_click_sound.set_volume(0.4)
+            except (FileNotFoundError, pygame.error):
+                pass
+
+    def play_select_sound(self, volume=0.3, use_click=False):
+        """Play the select sound effect with specified volume
+
+        Args:
+            volume: Volume level (0.0 to 1.0)
+            use_click: If True, use higher-pitched click sound; if False, use hover sound
+        """
+        sound = self.select_click_sound if use_click else self.select_sound
+        if sound:
+            try:
+                sound.set_volume(volume)
+                sound.play()
+            except pygame.error:
+                pass
 
     def get_arrow_at_pos(self, pos):
         """Get which arrow (if any) is at the given mouse position"""
@@ -164,29 +210,103 @@ class ScoreboardScreen:
             return True
         return False
 
+    def get_view_mode_box_at_pos(self, pos):
+        """Check if the given position is inside the view mode toggle box"""
+        box_width = 180
+        box_height = 50
+        box_x = 40
+        box_y = 90
+        box_rect = pygame.Rect(box_x, box_y, box_width, box_height)
+        return box_rect.collidepoint(pos)
+
+    def toggle_view_mode(self):
+        """Toggle between local and online view modes"""
+        if not self.is_online_available:
+            return  # Can't switch to online if not available
+
+        if self.view_mode == "local":
+            self.view_mode = "online"
+            self.scroll_offset = 0
+            self.load_online_scores()
+        else:
+            self.view_mode = "local"
+            self.scroll_offset = 0
+
+    def load_online_scores(self):
+        """Load scores from online leaderboard in a background thread"""
+        if self.loading_online:
+            return  # Already loading
+
+        self.loading_online = True
+        self.online_scores = []
+
+        def fetch_scores():
+            try:
+                difficulty = self.difficulties[self.current_difficulty]
+                checkpoints = self.checkpoints_filter[self.current_checkpoints]
+                scores = self.online_leaderboard.get_leaderboard(
+                    self.current_level,
+                    difficulty=difficulty,
+                    checkpoints_filter=checkpoints,
+                    limit=100
+                )
+                self.online_scores = scores
+            except Exception as e:
+                print(f"Failed to load online scores: {e}")
+                self.online_scores = []
+            finally:
+                self.loading_online = False
+
+        thread = threading.Thread(target=fetch_scores, daemon=True)
+        thread.start()
+
     def handle_event(self, event):
         """Handle keyboard and mouse input"""
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE or event.key == pygame.K_RETURN:
+                self.play_select_sound(use_click=True)  # Click sound for exiting
                 return True
+            elif event.key == pygame.K_t:
+                # Toggle between local and online view modes
+                if self.is_online_available:
+                    self.toggle_view_mode()
+                    self.play_select_sound(use_click=True)
             elif event.key == pygame.K_LEFT:
                 self.current_level = max(1, self.current_level - 1)
                 self.scroll_offset = 0  # Reset scroll when changing levels
+                if self.view_mode == "online":
+                    self.load_online_scores()
+                self.play_select_sound(volume=0.08)  # Hover sound for navigation
             elif event.key == pygame.K_RIGHT:
                 self.current_level = min(self.max_levels, self.current_level + 1)
                 self.scroll_offset = 0  # Reset scroll when changing levels
+                if self.view_mode == "online":
+                    self.load_online_scores()
+                self.play_select_sound(volume=0.08)  # Hover sound for navigation
             elif event.key in (pygame.K_UP, pygame.K_w):
                 self.current_difficulty = (self.current_difficulty - 1) % len(self.difficulties)
                 self.scroll_offset = 0  # Reset scroll when changing difficulty
+                if self.view_mode == "online":
+                    self.load_online_scores()
+                self.play_select_sound(volume=0.08)  # Hover sound for navigation
             elif event.key in (pygame.K_DOWN, pygame.K_s):
                 self.current_difficulty = (self.current_difficulty + 1) % len(self.difficulties)
                 self.scroll_offset = 0  # Reset scroll when changing difficulty
+                if self.view_mode == "online":
+                    self.load_online_scores()
+                self.play_select_sound(volume=0.08)  # Hover sound for navigation
             elif event.key in (pygame.K_q,):
                 self.current_checkpoints = (self.current_checkpoints - 1) % len(self.checkpoints_filter)
                 self.scroll_offset = 0  # Reset scroll when changing checkpoint filter
+                if self.view_mode == "online":
+                    self.load_online_scores()
+                self.play_select_sound(volume=0.08)  # Hover sound for navigation
             elif event.key in (pygame.K_e,):
                 self.current_checkpoints = (self.current_checkpoints + 1) % len(self.checkpoints_filter)
                 self.scroll_offset = 0  # Reset scroll when changing checkpoint filter
+                if self.view_mode == "online":
+                    self.load_online_scores()
+                self.play_select_sound(volume=0.08)  # Hover sound for navigation
         elif event.type == pygame.MOUSEWHEEL:
             # Handle trackpad/mouse wheel scrolling (Mac/modern mice)
             mouse_pos = pygame.mouse.get_pos()
@@ -211,36 +331,61 @@ class ScoreboardScreen:
                     self.scroll_offset += 1
                     return False  # Don't exit to main menu
 
-            arrow = self.get_arrow_at_pos(mouse_pos)
-            if arrow == "LEFT":
-                self.current_level = max(1, self.current_level - 1)
-                self.scroll_offset = 0  # Reset scroll when changing levels
-            elif arrow == "RIGHT":
-                self.current_level = min(self.max_levels, self.current_level + 1)
-                self.scroll_offset = 0  # Reset scroll when changing levels
+            # Check if clicking on view mode toggle box
+            if self.get_view_mode_box_at_pos(mouse_pos):
+                if self.is_online_available:
+                    self.toggle_view_mode()
+                    self.play_select_sound(use_click=True)
             else:
-                # Check if clicking on difficulty filter
-                diff_arrow = self.get_difficulty_arrow_at_pos(mouse_pos)
-                if diff_arrow == "UP":
-                    self.current_difficulty = (self.current_difficulty - 1) % len(self.difficulties)
-                    self.scroll_offset = 0  # Reset scroll when changing difficulty
-                elif diff_arrow == "DOWN":
-                    self.current_difficulty = (self.current_difficulty + 1) % len(self.difficulties)
-                    self.scroll_offset = 0  # Reset scroll when changing difficulty
-                elif diff_arrow == "CYCLE":
-                    # Clicking the box itself cycles through difficulties
-                    self.current_difficulty = (self.current_difficulty + 1) % len(self.difficulties)
-                    self.scroll_offset = 0  # Reset scroll when changing difficulty
+                arrow = self.get_arrow_at_pos(mouse_pos)
+                if arrow == "LEFT":
+                    self.current_level = max(1, self.current_level - 1)
+                    self.scroll_offset = 0  # Reset scroll when changing levels
+                    if self.view_mode == "online":
+                        self.load_online_scores()
+                    self.play_select_sound(volume=0.08)  # Hover sound for arrow navigation
+                elif arrow == "RIGHT":
+                    self.current_level = min(self.max_levels, self.current_level + 1)
+                    self.scroll_offset = 0  # Reset scroll when changing levels
+                    if self.view_mode == "online":
+                        self.load_online_scores()
+                    self.play_select_sound(volume=0.08)  # Hover sound for arrow navigation
                 else:
-                    # Check if clicking on checkpoints filter box
-                    if self.get_checkpoints_box_at_pos(mouse_pos):
-                        # Cycle through checkpoint filters
-                        self.current_checkpoints = (self.current_checkpoints + 1) % len(self.checkpoints_filter)
-                        self.scroll_offset = 0  # Reset scroll when changing checkpoints
+                    # Check if clicking on difficulty filter
+                    diff_arrow = self.get_difficulty_arrow_at_pos(mouse_pos)
+                    if diff_arrow == "UP":
+                        self.current_difficulty = (self.current_difficulty - 1) % len(self.difficulties)
+                        self.scroll_offset = 0  # Reset scroll when changing difficulty
+                        if self.view_mode == "online":
+                            self.load_online_scores()
+                        self.play_select_sound(volume=0.08)  # Hover sound for navigation
+                    elif diff_arrow == "DOWN":
+                        self.current_difficulty = (self.current_difficulty + 1) % len(self.difficulties)
+                        self.scroll_offset = 0  # Reset scroll when changing difficulty
+                        if self.view_mode == "online":
+                            self.load_online_scores()
+                        self.play_select_sound(volume=0.08)  # Hover sound for navigation
+                    elif diff_arrow == "CYCLE":
+                        # Clicking the box itself cycles through difficulties
+                        self.current_difficulty = (self.current_difficulty + 1) % len(self.difficulties)
+                        self.scroll_offset = 0  # Reset scroll when changing difficulty
+                        if self.view_mode == "online":
+                            self.load_online_scores()
+                        self.play_select_sound(volume=0.08)  # Hover sound for navigation
                     else:
-                        # Click anywhere else to go back (but not if scrolling over scoreboard)
-                        if not self.is_hovering_scoreboard(mouse_pos):
-                            return True
+                        # Check if clicking on checkpoints filter box
+                        if self.get_checkpoints_box_at_pos(mouse_pos):
+                            # Cycle through checkpoint filters
+                            self.current_checkpoints = (self.current_checkpoints + 1) % len(self.checkpoints_filter)
+                            self.scroll_offset = 0  # Reset scroll when changing checkpoints
+                            if self.view_mode == "online":
+                                self.load_online_scores()
+                            self.play_select_sound(volume=0.08)  # Hover sound for navigation
+                        else:
+                            # Click anywhere else to go back (but not if scrolling over scoreboard)
+                            if not self.is_hovering_scoreboard(mouse_pos):
+                                self.play_select_sound(use_click=True)  # Click sound for exit
+                                return True
         return False
 
     def format_time(self, frames):
@@ -311,6 +456,15 @@ class ScoreboardScreen:
         alpha_surface.set_alpha(150)
         self.screen.blit(alpha_surface, (x - size, y - size))
 
+    def is_hovering_view_mode_box(self, pos):
+        """Check if mouse is hovering over the view mode toggle box"""
+        box_width = 180
+        box_height = 50
+        box_x = 40
+        box_y = 90
+        box_rect = pygame.Rect(box_x, box_y, box_width, box_height)
+        return box_rect.collidepoint(pos)
+
     def is_hovering_difficulty_box(self, pos):
         """Check if mouse is hovering over the difficulty box"""
         screen_width = self.screen.get_width()
@@ -352,6 +506,38 @@ class ScoreboardScreen:
         scores_box_rect = pygame.Rect(scores_box_x, scores_box_y, scores_box_width, scores_box_height)
         return scores_box_rect.collidepoint(scaled_pos)
 
+    def draw_loading_spinner(self, x, y, radius=20):
+        """Draw an animated loading spinner"""
+        import math
+        self.loading_spinner_angle = (self.loading_spinner_angle + 8) % 360
+
+        # Draw multiple arcs to create a spinner effect
+        for i in range(8):
+            angle = (self.loading_spinner_angle + i * 45) % 360
+            alpha = 255 - (i * 30)  # Fade out the trailing segments
+            color = (150, 200, 255, alpha)
+
+            # Calculate arc endpoints
+            start_angle = math.radians(angle)
+            end_angle = math.radians(angle + 30)
+
+            # Draw arc segment
+            points = [(x, y)]
+            for a in range(int(angle), int(angle + 30), 5):
+                rad = math.radians(a)
+                px = x + radius * math.cos(rad)
+                py = y + radius * math.sin(rad)
+                points.append((int(px), int(py)))
+
+            if len(points) > 2:
+                try:
+                    pygame.draw.polygon(self.screen, color[:3], points)
+                except:
+                    pass
+
+        # Draw center circle
+        pygame.draw.circle(self.screen, (200, 230, 255), (x, y), radius // 3)
+
     def draw(self):
         """Draw the scoreboard screen with winter theme"""
         screen_width = self.screen.get_width()
@@ -361,6 +547,7 @@ class ScoreboardScreen:
         mouse_pos = pygame.mouse.get_pos()
         is_hovering = self.is_hovering_difficulty_box(mouse_pos)
         is_hovering_checkpoints = self.is_hovering_checkpoints_box(mouse_pos)
+        is_hovering_view_mode = self.is_hovering_view_mode_box(mouse_pos)
 
         # Update and draw snowflakes
         for snowflake in self.snowflakes:
@@ -413,6 +600,44 @@ class ScoreboardScreen:
             right_arrow = self.header_font.render(">", True, (20, 40, 80))
             right_rect = right_arrow.get_rect(midleft=(level_box_x + level_box_width - 30, level_box_y + level_box_height // 2))
             self.screen.blit(right_arrow, right_rect)
+
+        # Draw view mode toggle box (top left)
+        view_box_width = 180
+        view_box_height = 50
+        view_box_x = 40
+        view_box_y = 90
+
+        # Determine if clickable (only if online is available)
+        view_box_alpha = 200 if (is_hovering_view_mode and self.is_online_available) else 160
+        if not self.is_online_available:
+            view_box_alpha = 100  # Dimmed if offline
+
+        self.draw_frosted_box(view_box_x, view_box_y, view_box_width, view_box_height, view_box_alpha)
+
+        # View mode label
+        mode_text = "LOCAL" if self.view_mode == "local" else "ONLINE"
+        mode_color = (10, 30, 70) if self.is_online_available else (100, 100, 100)
+        mode_surface = self.level_font.render(mode_text, True, mode_color)
+        mode_rect = mode_surface.get_rect(center=(view_box_x + view_box_width // 2, view_box_y + view_box_height // 2))
+        self.screen.blit(mode_surface, mode_rect)
+
+        # Connection status indicator (small text below)
+        status_y = view_box_y + view_box_height + 8
+        if self.is_online_available:
+            status_text = "Online ✓"
+            status_color = (50, 150, 50)
+        else:
+            status_text = "Offline"
+            status_color = (150, 50, 50)
+        status_surface = self.score_font.render(status_text, True, status_color)
+        status_rect = status_surface.get_rect(center=(view_box_x + view_box_width // 2, status_y))
+        self.screen.blit(status_surface, status_rect)
+
+        # Add click hint when hovering and online is available
+        if is_hovering_view_mode and self.is_online_available:
+            hint_text = self.score_font.render("(click to toggle)", True, (80, 120, 160))
+            hint_rect = hint_text.get_rect(center=(view_box_x + view_box_width // 2, status_y + 20))
+            self.screen.blit(hint_text, hint_rect)
 
         # Draw difficulty filter box (top right)
         diff_box_width = 300
@@ -493,36 +718,41 @@ class ScoreboardScreen:
             hint_rect = hint_text.get_rect(center=(chkpt_box_x + chkpt_box_width // 2, chkpt_box_y + chkpt_box_height + 35))
             self.screen.blit(hint_text, hint_rect)
 
-        # Get leaderboard and filter by difficulty and checkpoints
-        leaderboard = SaveSystem.get_leaderboard(self.current_level)
+        # Get leaderboard based on view mode
+        if self.view_mode == "online":
+            # Use online scores
+            leaderboard = self.online_scores
+        else:
+            # Use local scores
+            leaderboard = SaveSystem.get_leaderboard(self.current_level)
 
-        # Filter scores by difficulty if not "All"
-        if self.current_difficulty > 0:  # 0 is "All"
-            selected_difficulty = self.difficulties[self.current_difficulty]
-            leaderboard = [score for score in leaderboard if score.get('difficulty', 'Medium') == selected_difficulty]
+            # Filter scores by difficulty if not "All"
+            if self.current_difficulty > 0:  # 0 is "All"
+                selected_difficulty = self.difficulties[self.current_difficulty]
+                leaderboard = [score for score in leaderboard if score.get('difficulty', 'Medium') == selected_difficulty]
 
-        # Filter scores by checkpoints if not "All"
-        if self.current_checkpoints > 0:  # 0 is "All"
-            checkpoints_enabled = (self.current_checkpoints == 2)  # 1="Off", 2="On"
-            leaderboard = [score for score in leaderboard if score.get('checkpoints', False) == checkpoints_enabled]
+            # Filter scores by checkpoints if not "All"
+            if self.current_checkpoints > 0:  # 0 is "All"
+                checkpoints_enabled = (self.current_checkpoints == 2)  # 1="Off", 2="On"
+                leaderboard = [score for score in leaderboard if score.get('checkpoints', False) == checkpoints_enabled]
 
         # Draw scores in frosted box (widened for checkpoints column)
-        scores_box_width = 730
+        scores_box_width = 780
         scores_box_height = 380
         scores_box_x = (screen_width - scores_box_width) // 2
         scores_box_y = 160
 
         self.draw_frosted_box(scores_box_x, scores_box_y, scores_box_width, scores_box_height, 170)
 
-        # Column headers (added checkpoints column)
+        # Column headers (adjusted for wider username column)
         header_y = scores_box_y + 20
         headers = [
             ("RANK", 30),
             ("NAME", 100),
-            ("TIME", 270),
-            ("COINS", 400),
-            ("DIFF", 510),
-            ("CHKPT", 620)
+            ("TIME", 340),
+            ("COINS", 470),
+            ("DIFF", 580),
+            ("CHKPT", 690)
         ]
 
         for text, x_offset in headers:
@@ -539,7 +769,16 @@ class ScoreboardScreen:
         row_height = 32
         max_visible_rows = 10
 
-        if not leaderboard:
+        # Show loading spinner if loading online scores
+        if self.loading_online:
+            spinner_x = screen_width // 2
+            spinner_y = start_y + 100
+            self.draw_loading_spinner(spinner_x, spinner_y, 25)
+
+            loading_text = self.score_font.render("Loading online scores...", True, self.ice_blue)
+            loading_rect = loading_text.get_rect(center=(screen_width // 2, spinner_y + 50))
+            self.screen.blit(loading_text, loading_rect)
+        elif not leaderboard:
             no_scores = self.score_font.render("NO SCORES YET! BE THE FIRST!", True, self.snow_white)
             no_scores_rect = no_scores.get_rect(center=(screen_width // 2, start_y + 100))
             self.screen.blit(no_scores, no_scores_rect)
@@ -569,31 +808,31 @@ class ScoreboardScreen:
                 rank_text = self.score_font.render(f"#{actual_rank + 1}", True, rank_color)
                 self.screen.blit(rank_text, (scores_box_x + 30, y))
 
-                # Draw username
-                username_text = self.score_font.render(score['username'][:12], True, (20, 40, 80))
+                # Draw username (up to 20 characters)
+                username_text = self.score_font.render(score['username'][:20], True, (20, 40, 80))
                 self.screen.blit(username_text, (scores_box_x + 100, y))
 
-                # Draw time
+                # Draw time (moved right to accommodate longer usernames)
                 time_str = self.format_time(score['time'])
                 time_text = self.score_font.render(time_str, True, (20, 40, 80))
-                self.screen.blit(time_text, (scores_box_x + 270, y))
+                self.screen.blit(time_text, (scores_box_x + 340, y))
 
-                # Draw coins
+                # Draw coins (moved right to match)
                 coins_text = self.score_font.render(str(score['coins']), True, (20, 40, 80))
-                self.screen.blit(coins_text, (scores_box_x + 400, y))
+                self.screen.blit(coins_text, (scores_box_x + 470, y))
 
                 # Draw difficulty (default to "Medium" for old scores)
                 difficulty = score.get('difficulty', 'Medium')
                 # Shorten difficulty names for display
                 diff_short = difficulty[0]  # E, M, or H
                 diff_text = self.score_font.render(diff_short, True, (20, 40, 80))
-                self.screen.blit(diff_text, (scores_box_x + 510, y))
+                self.screen.blit(diff_text, (scores_box_x + 580, y))
 
                 # Draw checkpoints (default to False for old scores)
                 checkpoints = score.get('checkpoints', False)
                 checkpoint_text = "On" if checkpoints else "Off"
                 chkpt_text = self.score_font.render(checkpoint_text, True, (20, 40, 80))
-                self.screen.blit(chkpt_text, (scores_box_x + 620, y))
+                self.screen.blit(chkpt_text, (scores_box_x + 690, y))
 
             # Draw scroll indicator below the scoreboard box if there are more scores
             if len(leaderboard) > max_visible_rows:
@@ -605,9 +844,14 @@ class ScoreboardScreen:
 
         # Draw hints at bottom
         hint_y = screen_height - 40
-        hints = [
-            "< / > : LEVEL     UP / DOWN : DIFFICULTY     Q / E : CHECKPOINTS     ESC / ENTER : BACK"
-        ]
+        if self.is_online_available:
+            hints = [
+                "< / > : LEVEL     UP / DOWN : DIFFICULTY     Q / E : CHECKPOINTS     T : TOGGLE VIEW     ESC : BACK"
+            ]
+        else:
+            hints = [
+                "< / > : LEVEL     UP / DOWN : DIFFICULTY     Q / E : CHECKPOINTS     ESC / ENTER : BACK"
+            ]
 
         for hint in hints:
             hint_surface = self.hint_font.render(hint, True, self.ice_blue)

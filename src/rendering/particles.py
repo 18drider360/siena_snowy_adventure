@@ -46,8 +46,17 @@ class Particle:
         screen_x = int(self.x - camera_x)
         screen_y = int(self.y)
 
-        if 0 <= screen_x <= screen.get_width() and 0 <= screen_y <= screen.get_height():
-            # Create a temporary surface for alpha blending
+        # Skip off-screen particles
+        if not (-current_size <= screen_x <= screen.get_width() + current_size):
+            return
+        if not (-current_size <= screen_y <= screen.get_height() + current_size):
+            return
+
+        # For small particles, draw directly (faster)
+        if current_size <= 2:
+            pygame.draw.circle(screen, self.color, (screen_x, screen_y), current_size)
+        else:
+            # For larger particles, use surface with alpha (cached approach)
             surf = pygame.Surface((current_size * 2, current_size * 2))
             surf.set_colorkey((0, 0, 0))
             pygame.draw.circle(surf, self.color, (current_size, current_size), current_size)
@@ -98,6 +107,8 @@ class ExplosionParticle(Particle):
 class ParticleManager:
     """Manages all particles in the game."""
 
+    MAX_PARTICLES = 150  # Limit to prevent performance issues
+
     def __init__(self):
         self.particles = []
 
@@ -112,12 +123,20 @@ class ParticleManager:
             direction: Angle in radians (None = all directions)
             speed_range: (min_speed, max_speed) tuple
         """
+        # Limit particle count to prevent lag
+        if len(self.particles) >= self.MAX_PARTICLES:
+            return
+
         particle_class = {
             'snow': SnowPuffParticle,
             'sparkle': SparkleParticle,
             'hit': HitSparkParticle,
             'explosion': ExplosionParticle
         }.get(particle_type, SnowPuffParticle)
+
+        # Reduce count if we're near the limit
+        available_slots = self.MAX_PARTICLES - len(self.particles)
+        count = min(count, available_slots)
 
         for _ in range(count):
             if direction is None:

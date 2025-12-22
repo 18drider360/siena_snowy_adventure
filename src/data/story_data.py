@@ -17,7 +17,7 @@ Contains all narrative dialogue and cutscene content for Siena's journey
 OPENING_LOST = {
     'type': 'narration',
     'speaker': None,
-    'background_image': 'assets/images/dialogue/OPENING.png',
+    'background_image': 'assets/images/dialogue/OPENING.jpg',
     'lines': [
         "It was supposed to be a simple family road trip to Antarctica...",
         "",
@@ -33,7 +33,7 @@ OPENING_LOST = {
 OPENING_PEDRO_APPEARS = {
     'type': 'dialogue',
     'speaker': 'Pedro',
-    'background_image': 'assets/images/dialogue/OPENING_PEDRO.png',
+    'background_image': 'assets/images/dialogue/OPENING_PEDRO.jpg',
     'lines': [
         "Hello there, little one! You look lost.",
         "",
@@ -45,7 +45,7 @@ OPENING_PEDRO_APPEARS = {
 OPENING_PEDRO_OFFER = {
     'type': 'dialogue',
     'speaker': 'Pedro',
-    'background_image': 'assets/images/dialogue/PEDRO_OFFER.png',
+    'background_image': 'assets/images/dialogue/PEDRO_OFFER.jpg',
     'lines': [
         "Antarctica, you say? I know these mountains well.",
         "",
@@ -62,7 +62,7 @@ OPENING_PEDRO_OFFER = {
 OPENING_SIENA_ACCEPTS = {
     'type': 'narration',
     'speaker': None,
-    'background_image': 'assets/images/dialogue/SIENA_ACCEPT.png',
+    'background_image': 'assets/images/dialogue/SIENA_ACCEPT.jpg',
     'lines': [
         "I don't have much choice. The main road is too far,",
         "and I need to find my family quickly.",
@@ -77,7 +77,7 @@ OPENING_SIENA_ACCEPTS = {
 OPENING_PEDRO_TUTORIAL = {
     'type': 'dialogue',
     'speaker': 'Pedro',
-    'background_image': 'assets/images/dialogue/PEDRO_TUTORIAL.png',
+    'background_image': 'assets/images/dialogue/PEDRO_TUTORIAL.jpg',
     'lines': [
         "Remember these basics, Siena:",
         "",
@@ -97,7 +97,7 @@ OPENING_PEDRO_TUTORIAL = {
 LEVEL_1_INTRO = {
     'type': 'dialogue',
     'speaker': 'Pedro',
-    'background_image': 'assets/images/dialogue/LEVEL_1_INTRO.png',
+    'background_image': 'assets/images/dialogue/LEVEL_1_INTRO.jpg',
     'lines': [
         "This is the Winter Forest - the first leg of your journey.",
         "",
@@ -113,7 +113,7 @@ LEVEL_1_INTRO = {
 LEVEL_1_COMPLETE_SIENA = {
     'type': 'narration',
     'speaker': None,
-    'background_image': 'assets/images/dialogue/LEVEL_1_COMPLETE_SIENA.png',
+    'background_image': 'assets/images/dialogue/LEVEL_1_COMPLETE_SIENA.jpg',
     'lines': [
         "I... I made it through the forest.",
         "",
@@ -129,7 +129,7 @@ LEVEL_1_COMPLETE_SIENA = {
 LEVEL_1_COMPLETE_PEDRO = {
     'type': 'dialogue',
     'speaker': 'Pedro',
-    'background_image': 'assets/images/dialogue/LEVEL_1_COMPLETE_PEDRO.png',
+    'background_image': 'assets/images/dialogue/LEVEL_1_COMPLETE_PEDRO.jpg',
     'lines': [
         "Siena! You did wonderfully!",
         "",
@@ -146,7 +146,7 @@ LEVEL_1_COMPLETE_PEDRO = {
 LEVEL_1_PEDRO_FORWARD = {
     'type': 'dialogue',
     'speaker': 'Pedro',
-    'background_image': 'assets/images/dialogue/LEVEL_1_PEDRO_FORWARD.png',
+    'background_image': 'assets/images/dialogue/LEVEL_1_PEDRO_FORWARD.jpg',
     'lines': [
         "Come. We must keep moving north.",
         "",
@@ -164,7 +164,7 @@ LEVEL_1_PEDRO_FORWARD = {
 LEVEL_2_ARRIVAL = {
     'type': 'narration',
     'speaker': None,
-    'background_image': 'assets/images/dialogue/LEVEL_2_ARRIVAL.png',
+    'background_image': 'assets/images/dialogue/LEVEL_2_ARRIVAL.jpg',
     'lines': [
         "Cozy cabins appear through the trees, half-buried in snow.",
         "",
@@ -178,7 +178,7 @@ LEVEL_2_ARRIVAL = {
 LEVEL_2_ROLL_TRAINING = {
     'type': 'dialogue',
     'speaker': 'Pedro',
-    'background_image': 'assets/images/dialogue/LEVEL_2_ROLL_TRAINING.png',
+    'background_image': 'assets/images/dialogue/LEVEL_2_ROLL_TRAINING.jpg',
     'lines': [
         "Before we enter, let me teach you something important.",
         "",
@@ -194,7 +194,7 @@ LEVEL_2_ROLL_TRAINING = {
 LEVEL_2_PEDRO_INTRO = {
     'type': 'dialogue',
     'speaker': 'Pedro',
-    'background_image': 'assets/images/dialogue/LEVEL_2_PEDRO_INTRO.png',
+    'background_image': 'assets/images/dialogue/LEVEL_2_PEDRO_INTRO.jpg',
     'lines': [
         "The Winter Cabin Village. Humans still live here, alongside Frost Golems.",
         "",
@@ -211,7 +211,7 @@ LEVEL_2_PEDRO_INTRO = {
 LEVEL_2_COMPLETE_SIENA = {
     'type': 'narration',
     'speaker': None,
-    'background_image': 'assets/images/dialogue/LEVEL_2_COMPLETE_SIENA.png',
+    'background_image': 'assets/images/dialogue/LEVEL_2_COMPLETE_SIENA.jpg',
     'lines': [
         "I made it past the Frost Golems and the swordsmen!",
         "",
@@ -227,7 +227,7 @@ LEVEL_2_COMPLETE_SIENA = {
 LEVEL_2_PEDRO_PROUD = {
     'type': 'dialogue',
     'speaker': 'Pedro',
-    'background_image': 'assets/images/dialogue/LEVEL_2_PEDRO_PROUD.png',
+    'background_image': 'assets/images/dialogue/LEVEL_2_PEDRO_PROUD.jpg',
     'lines': [
         "Look at you! Your confidence is growing!",
         "",
@@ -243,7 +243,7 @@ LEVEL_2_PEDRO_PROUD = {
 LEVEL_2_MOUNTAIN_PREVIEW = {
     'type': 'dialogue',
     'speaker': 'Pedro',
-    'background_image': 'assets/images/dialogue/LEVEL_2_MOUNTAIN_PREVIEW.png',
+    'background_image': 'assets/images/dialogue/LEVEL_2_MOUNTAIN_PREVIEW.jpg',
     'lines': [
         "But Siena... the next part won't be easy.",
         "",
@@ -265,7 +265,7 @@ LEVEL_2_MOUNTAIN_PREVIEW = {
 LEVEL_3_DOUBT = {
     'type': 'narration',
     'speaker': None,
-    'background_image': 'assets/images/dialogue/LEVEL_3_DOUBT.png',
+    'background_image': 'assets/images/dialogue/LEVEL_3_DOUBT.jpg',
     'lines': [
         "I stare up at the mountains. They're so... huge.",
         "",
@@ -281,7 +281,7 @@ LEVEL_3_DOUBT = {
 LEVEL_3_FAMILY_MEMORY = {
     'type': 'narration',
     'speaker': None,
-    'background_image': 'assets/images/dialogue/LEVEL_3_FAMILY_MEMORY.png',
+    'background_image': 'assets/images/dialogue/LEVEL_3_FAMILY_MEMORY.jpg',
     'lines': [
         "Wait. No.",
         "",
@@ -299,7 +299,7 @@ LEVEL_3_FAMILY_MEMORY = {
 LEVEL_3_PEDRO_BELIEF = {
     'type': 'dialogue',
     'speaker': 'Pedro',
-    'background_image': 'assets/images/dialogue/LEVEL_3_PEDRO_BELIEF.png',
+    'background_image': 'assets/images/dialogue/LEVEL_3_PEDRO_BELIEF.jpg',
     'lines': [
         "I can see the fear in your eyes, little one.",
         "",
@@ -317,7 +317,7 @@ LEVEL_3_PEDRO_BELIEF = {
 LEVEL_3_PEDRO_WARNING = {
     'type': 'dialogue',
     'speaker': 'Pedro',
-    'background_image': 'assets/images/dialogue/LEVEL_3_PEDRO_WARNING.png',
+    'background_image': 'assets/images/dialogue/LEVEL_3_PEDRO_WARNING.jpg',
     'lines': [
         "Now we face the mountains head-on.",
         "",
@@ -334,7 +334,7 @@ LEVEL_3_PEDRO_WARNING = {
 LEVEL_3_SPIN_TRAINING = {
     'type': 'dialogue',
     'speaker': 'Pedro',
-    'background_image': 'assets/images/dialogue/LEVEL_3_SPIN_TRAINING.png',
+    'background_image': 'assets/images/dialogue/LEVEL_3_SPIN_TRAINING.jpg',
     'lines': [
         "You'll need a powerful technique for these mountains.",
         "",
@@ -350,7 +350,7 @@ LEVEL_3_SPIN_TRAINING = {
 LEVEL_3_PEDRO_ENCOURAGEMENT = {
     'type': 'dialogue',
     'speaker': 'Pedro',
-    'background_image': 'assets/images/dialogue/LEVEL_3_PEDRO_ENCOURAGEMENT.png',
+    'background_image': 'assets/images/dialogue/LEVEL_3_PEDRO_ENCOURAGEMENT.jpg',
     'lines': [
         "You've learned so much already, Siena.",
         "",
@@ -368,7 +368,7 @@ LEVEL_3_PEDRO_ENCOURAGEMENT = {
 LEVEL_3_SUMMIT_TRIUMPH = {
     'type': 'narration',
     'speaker': None,
-    'background_image': 'assets/images/dialogue/LEVEL_3_SUMMIT_TRIUMPH.png',
+    'background_image': 'assets/images/dialogue/LEVEL_3_SUMMIT_TRIUMPH.jpg',
     'text_position': 'bottom',
     'lines': [
         "I'm... at the top. I'm actually at the top!",
@@ -385,7 +385,7 @@ LEVEL_3_SUMMIT_TRIUMPH = {
 LEVEL_3_PEDRO_REVELATION = {
     'type': 'dialogue',
     'speaker': 'Pedro',
-    'background_image': 'assets/images/dialogue/LEVEL_3_PEDRO_REVELATION.png',
+    'background_image': 'assets/images/dialogue/LEVEL_3_PEDRO_REVELATION.jpg',
     'lines': [
         "I'm proud of you, Siena. So very proud.",
         "",
@@ -403,7 +403,7 @@ LEVEL_3_PEDRO_REVELATION = {
 LEVEL_3_NORTHERN_LIGHTS_VIEW = {
     'type': 'narration',
     'speaker': None,
-    'background_image': 'assets/images/dialogue/LEVEL_3_NORTHERN_LIGHTS_VIEW.png',
+    'background_image': 'assets/images/dialogue/LEVEL_3_NORTHERN_LIGHTS_VIEW.jpg',
     'text_position': 'bottom',
     'lines': [
         "And there... in the distance...",
@@ -422,7 +422,7 @@ LEVEL_3_NORTHERN_LIGHTS_VIEW = {
 LEVEL_3_PEDRO_FINAL_PUSH = {
     'type': 'dialogue',
     'speaker': 'Pedro',
-    'background_image': 'assets/images/dialogue/LEVEL_3_PEDRO_FINAL_PUSH .png',
+    'background_image': 'assets/images/dialogue/LEVEL_3_PEDRO_FINAL_PUSH .jpg',
     'lines': [
         "The Northern Lights valley. The final stretch.",
         "",
@@ -442,7 +442,7 @@ LEVEL_3_PEDRO_FINAL_PUSH = {
 LEVEL_4_LIGHTS_ARRIVAL = {
     'type': 'narration',
     'speaker': None,
-    'background_image': 'assets/images/dialogue/LEVEL_4_LIGHTS_ARRIVAL.png',
+    'background_image': 'assets/images/dialogue/LEVEL_4_LIGHTS_ARRIVAL.jpg',
     'lines': [
         "The aurora borealis fills the sky above me.",
         "",
@@ -458,7 +458,7 @@ LEVEL_4_LIGHTS_ARRIVAL = {
 LEVEL_4_PEDRO_WARNING = {
     'type': 'dialogue',
     'speaker': 'Pedro',
-    'background_image': 'assets/images/dialogue/LEVEL_4_PEDRO_WARNING.png',
+    'background_image': 'assets/images/dialogue/LEVEL_4_PEDRO_WARNING.jpg',
     'lines': [
         "Siena, listen carefully.",
         "",
@@ -479,7 +479,7 @@ LEVEL_4_PEDRO_WARNING = {
 LEVEL_4_PEDRO_GOODBYE = {
     'type': 'dialogue',
     'speaker': 'Pedro',
-    'background_image': 'assets/images/dialogue/LEVEL_4_PEDRO_GOODBYE.png',
+    'background_image': 'assets/images/dialogue/LEVEL_4_PEDRO_GOODBYE.jpg',
     'lines': [
         "There's something I must tell you.",
         "",
@@ -499,7 +499,7 @@ LEVEL_4_PEDRO_GOODBYE = {
 LEVEL_4_SIENA_READY = {
     'type': 'narration',
     'speaker': None,
-    'background_image': 'assets/images/dialogue/LEVEL_4_SIENA_READY.png',
+    'background_image': 'assets/images/dialogue/LEVEL_4_SIENA_READY.jpg',
     'lines': [
         "Pedro's words echo in my mind.",
         "",
@@ -519,7 +519,7 @@ LEVEL_4_SIENA_READY = {
 ENDING_ARRIVAL = {
     'type': 'narration',
     'speaker': None,
-    'background_image': 'assets/images/dialogue/ENDING_ARRIVAL.png',
+    'background_image': 'assets/images/dialogue/ENDING_ARRIVAL.jpg',
     'lines': [
         "I emerge from the valley, exhausted but alive.",
         "",
@@ -537,7 +537,7 @@ ENDING_ARRIVAL = {
 ENDING_REUNION = {
     'type': 'dialogue',
     'speaker': 'Family',
-    'background_image': 'assets/images/dialogue/ENDING_REUNION.png',
+    'background_image': 'assets/images/dialogue/ENDING_REUNION.jpg',
     'lines': [
         "SIENA! We were so worried!",
         "",
@@ -552,7 +552,7 @@ ENDING_REUNION = {
 ENDING_SIENA_EXPLAINS = {
     'type': 'narration',
     'speaker': None,
-    'background_image': 'assets/images/dialogue/ENDING_SIENA_EXPLAINS.png',
+    'background_image': 'assets/images/dialogue/ENDING_SIENA_EXPLAINS.jpg',
     'lines': [
         "I wasn't alone...",
         "",
@@ -569,7 +569,7 @@ ENDING_SIENA_EXPLAINS = {
 ENDING_PEDRO_THANKS = {
     'type': 'narration',
     'speaker': None,
-    'background_image': 'assets/images/dialogue/ENDING_PEDRO_THANKS.png',
+    'background_image': 'assets/images/dialogue/ENDING_PEDRO_THANKS.jpg',
     'lines': [
         "I turn to introduce Pedro to my family.",
         "",
@@ -587,7 +587,7 @@ ENDING_PEDRO_THANKS = {
 ENDING_PEDRO_GONE = {
     'type': 'narration',
     'speaker': None,
-    'background_image': 'assets/images/dialogue/ENDING_PEDRO_GONE.png',
+    'background_image': 'assets/images/dialogue/ENDING_PEDRO_GONE.jpg',
     'lines': [
         "Was he real? Or something more?",
         "",
@@ -602,7 +602,7 @@ ENDING_PEDRO_GONE = {
 ENDING_FINAL = {
     'type': 'narration',
     'speaker': None,
-    'background_image': 'assets/images/dialogue/ENDING_FINAL.png',
+    'background_image': 'assets/images/dialogue/ENDING_FINAL.jpg',
     'lines': [
         "What matters is that I made it.",
         "",

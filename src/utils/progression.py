@@ -52,8 +52,8 @@ class GameProgression:
             'crouch': True,
             'jump': True,
             'double_jump': True,
-            'roll': False,      # Unlocked after Level 1
-            'spin': False       # Unlocked after Level 2
+            'roll': False,      # Available starting Level 2
+            'spin': False       # Available starting Level 3
         }
 
         # --- LEVEL TRACKING ---
@@ -79,13 +79,18 @@ class GameProgression:
     
     def get_abilities(self):
         """Get current unlocked abilities based on current level"""
-        # Create a copy of base unlocked abilities
+        # Abilities unlock when you ENTER a level (not after completing it)
+        # Level 1: No special abilities (just walk, jump, crouch)
+        # Level 2+: Roll available
+        # Level 3+: Roll + Spin available
+
         abilities = self.unlocked_abilities.copy()
 
-        # Enable abilities based on current level (not completion)
+        # Unlock roll starting from Level 2
         if self.current_level >= 2:
             abilities['roll'] = True
 
+        # Unlock spin starting from Level 3
         if self.current_level >= 3:
             abilities['spin'] = True
 
@@ -122,16 +127,9 @@ class GameProgression:
     
     def _check_ability_unlocks(self, completed_level):
         """Check if completing this level unlocks new abilities"""
-        unlock_schedule = {
-            1: ['roll'],    # Complete Level 1 Ã¢â€ â€™ Unlock Roll
-            2: ['spin'],    # Complete Level 2 Ã¢â€ â€™ Unlock Spin
-            # Add more as you add levels
-        }
-        
-        if completed_level in unlock_schedule:
-            for ability in unlock_schedule[completed_level]:
-                self.unlock_ability(ability)
-    
+        # Abilities now unlock based on current_level in get_abilities()
+        pass
+
     def advance_to_next_level(self):
         """Move to the next level"""
         self.current_level += 1

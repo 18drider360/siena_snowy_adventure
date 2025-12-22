@@ -6,7 +6,7 @@ Handles title screen, level transitions, and educational screens
 import sys
 import pygame
 from src.utils import settings as S
-from title_screen import TitleScreen, LevelSelectScreen, GuideScreen
+from src.rendering.screens.title_screen import TitleScreen, LevelSelectScreen, GuideScreen
 from src.ui.scoreboard import show_scoreboard
 from src.ui.username_input import PlayerProfileScreen
 from src.rendering.rendering import (

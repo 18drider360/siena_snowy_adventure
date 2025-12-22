@@ -8,6 +8,7 @@ class PauseMenu:
         # Menu options
         self.options = ["CONTINUE", "RESTART", "MAIN MENU"]
         self.selected_index = 0
+        self.previous_selected_index = 0  # Track for hover sound
 
         # Load fonts
         try:
@@ -17,12 +18,18 @@ class PauseMenu:
             self.title_font = pygame.font.Font(None, 56)
             self.menu_font = pygame.font.Font(None, 40)
 
-        # Load select sound
+        # Load select sounds (hover and click)
         self.select_sound = None
+        self.select_click_sound = None
         if S.MASTER_AUDIO_ENABLED:
             try:
-                self.select_sound = pygame.mixer.Sound("assets/sounds/select.wav")
+                self.select_sound = pygame.mixer.Sound("assets/sounds/select_fast.wav")
                 self.select_sound.set_volume(0.4)
+            except (FileNotFoundError, pygame.error):
+                pass
+            try:
+                self.select_click_sound = pygame.mixer.Sound("assets/sounds/select_click.wav")
+                self.select_click_sound.set_volume(0.4)
             except (FileNotFoundError, pygame.error):
                 pass
 
@@ -54,11 +61,18 @@ class PauseMenu:
 
         return None
 
-    def play_select_sound(self):
-        """Play the select sound effect"""
-        if self.select_sound:
+    def play_select_sound(self, volume=0.3, use_click=False):
+        """Play the select sound effect with specified volume
+
+        Args:
+            volume: Volume level (0.0 to 1.0)
+            use_click: If True, use higher-pitched click sound; if False, use hover sound
+        """
+        sound = self.select_click_sound if use_click else self.select_sound
+        if sound:
             try:
-                self.select_sound.play()
+                sound.set_volume(volume)
+                sound.play()
             except pygame.error:
                 pass
 
@@ -67,14 +81,16 @@ class PauseMenu:
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_UP, pygame.K_w):
                 self.selected_index = (self.selected_index - 1) % len(self.options)
+                self.play_select_sound(volume=0.08)  # Hover sound for arrow key navigation
                 return "navigate"
 
             elif event.key in (pygame.K_DOWN, pygame.K_s):
                 self.selected_index = (self.selected_index + 1) % len(self.options)
+                self.play_select_sound(volume=0.08)  # Hover sound for arrow key navigation
                 return "navigate"
 
             elif event.key == pygame.K_RETURN:
-                self.play_select_sound()
+                self.play_select_sound(use_click=True)
                 return self.options[self.selected_index]
 
             # ESC handling removed - now handled in main.py
@@ -85,7 +101,14 @@ class PauseMenu:
             scaled_pos = (int(mouse_pos[0] / S.DISPLAY_SCALE), int(mouse_pos[1] / S.DISPLAY_SCALE))
             clicked_option = self.get_option_at_pos(scaled_pos)
             if clicked_option is not None:
+                # Play sound when hovering over a new option
+                if clicked_option != self.previous_selected_index:
+                    self.play_select_sound(volume=0.08)  # Very quiet hover sound
                 self.selected_index = clicked_option
+                self.previous_selected_index = clicked_option
+            else:
+                # Reset tracking when not hovering over any option
+                self.previous_selected_index = -1
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_pos = pygame.mouse.get_pos()
@@ -94,7 +117,7 @@ class PauseMenu:
             clicked_option = self.get_option_at_pos(scaled_pos)
             if clicked_option is not None:
                 self.selected_index = clicked_option
-                self.play_select_sound()
+                self.play_select_sound(use_click=True)
                 return self.options[self.selected_index]
 
         return None
@@ -188,6 +211,7 @@ class DeathMenu:
         # Menu options (default: no checkpoint)
         self.options = ["RESTART", "MAIN MENU"]
         self.selected_index = 0
+        self.previous_selected_index = 0  # Track for hover sound
         self.has_checkpoint = False
 
         # Load fonts
@@ -198,12 +222,18 @@ class DeathMenu:
             self.title_font = pygame.font.Font(None, 72)
             self.menu_font = pygame.font.Font(None, 40)
 
-        # Load select sound
+        # Load select sounds (hover and click)
         self.select_sound = None
+        self.select_click_sound = None
         if S.MASTER_AUDIO_ENABLED:
             try:
-                self.select_sound = pygame.mixer.Sound("assets/sounds/select.wav")
+                self.select_sound = pygame.mixer.Sound("assets/sounds/select_fast.wav")
                 self.select_sound.set_volume(0.4)
+            except (FileNotFoundError, pygame.error):
+                pass
+            try:
+                self.select_click_sound = pygame.mixer.Sound("assets/sounds/select_click.wav")
+                self.select_click_sound.set_volume(0.4)
             except (FileNotFoundError, pygame.error):
                 pass
 
@@ -240,11 +270,18 @@ class DeathMenu:
 
         return None
 
-    def play_select_sound(self):
-        """Play the select sound effect"""
-        if self.select_sound:
+    def play_select_sound(self, volume=0.3, use_click=False):
+        """Play the select sound effect with specified volume
+
+        Args:
+            volume: Volume level (0.0 to 1.0)
+            use_click: If True, use higher-pitched click sound; if False, use hover sound
+        """
+        sound = self.select_click_sound if use_click else self.select_sound
+        if sound:
             try:
-                self.select_sound.play()
+                sound.set_volume(volume)
+                sound.play()
             except pygame.error:
                 pass
 
@@ -253,14 +290,16 @@ class DeathMenu:
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_UP, pygame.K_w):
                 self.selected_index = (self.selected_index - 1) % len(self.options)
+                self.play_select_sound(volume=0.08)  # Hover sound for arrow key navigation
                 return "navigate"
 
             elif event.key in (pygame.K_DOWN, pygame.K_s):
                 self.selected_index = (self.selected_index + 1) % len(self.options)
+                self.play_select_sound(volume=0.08)  # Hover sound for arrow key navigation
                 return "navigate"
 
             elif event.key == pygame.K_RETURN:
-                self.play_select_sound()
+                self.play_select_sound(use_click=True)
                 return self.options[self.selected_index]
 
         elif event.type == pygame.MOUSEMOTION:
@@ -269,7 +308,14 @@ class DeathMenu:
             scaled_pos = (int(mouse_pos[0] / S.DISPLAY_SCALE), int(mouse_pos[1] / S.DISPLAY_SCALE))
             clicked_option = self.get_option_at_pos(scaled_pos)
             if clicked_option is not None:
+                # Play sound when hovering over a new option
+                if clicked_option != self.previous_selected_index:
+                    self.play_select_sound(volume=0.08)  # Very quiet hover sound
                 self.selected_index = clicked_option
+                self.previous_selected_index = clicked_option
+            else:
+                # Reset tracking when not hovering over any option
+                self.previous_selected_index = -1
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_pos = pygame.mouse.get_pos()
@@ -278,7 +324,7 @@ class DeathMenu:
             clicked_option = self.get_option_at_pos(scaled_pos)
             if clicked_option is not None:
                 self.selected_index = clicked_option
-                self.play_select_sound()
+                self.play_select_sound(use_click=True)
                 return self.options[self.selected_index]
 
         return None

@@ -14,6 +14,14 @@ build/
 dist/
 *.spec
 
+# Distribution packages
+*.zip
+*.dmg
+*.exe
+*.msi
+*.tar.gz
+*.pkg
+
 # IDE
 .vscode/
 .idea/
@@ -31,3 +39,9 @@ Thumbs.db
 # pytest
 .pytest_cache/
 *.egg-info/
+
+# Firebase credentials (NEVER commit these!)
+firebase-key.json
+firebase-adminsdk-*.json
+.env
+.env.local

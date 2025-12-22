@@ -7,6 +7,7 @@ Winter-themed with falling snow animation
 import pygame
 import random
 from src.utils import settings as S
+from src.utils.username_filter import validate_username, sanitize_username
 
 
 class Snowflake:
@@ -86,12 +87,14 @@ class UsernameInput:
     def __init__(self, screen):
         self.screen = screen
         self.username = ""
-        self.max_length = 12
+        self.max_length = 20  # Maximum 20 characters
         self.cursor_visible = True
         self.cursor_timer = 0
         self.cursor_blink_rate = 30
         self.selected_button = None  # Track which button is selected with keyboard
         self.button_hover = None  # Track which button is being hovered with mouse
+        self.error_message = ""  # Track validation error messages
+        self.error_timer = 0  # Timer for showing error messages
 
         # Wintery color palette
         self.bg_gradient_top = (15, 30, 60)
@@ -147,17 +150,28 @@ class UsernameInput:
                 # If a button is selected, activate it
                 if self.selected_button == "generate":
                     self.username = self.generate_random_username()
+                    self.error_message = ""  # Clear any error
                     return False
                 elif self.selected_button == "confirm":
-                    # Only confirm if username has at least 1 character
+                    # Validate username before confirming
                     if self.username.strip():
-                        return True
+                        is_valid, error_msg = validate_username(self.username)
+                        if is_valid:
+                            return True
+                        else:
+                            self.error_message = error_msg
+                            self.error_timer = 180  # Show error for 3 seconds (at 60 FPS)
                     # If empty, ignore the Enter key
                 else:
                     # No button selected - just confirm username
-                    # Only confirm if username has at least 1 character
+                    # Validate username before confirming
                     if self.username.strip():
-                        return True
+                        is_valid, error_msg = validate_username(self.username)
+                        if is_valid:
+                            return True
+                        else:
+                            self.error_message = error_msg
+                            self.error_timer = 180  # Show error for 3 seconds
                     # If empty, ignore the Enter key
 
             elif event.key == pygame.K_ESCAPE:
@@ -187,10 +201,16 @@ class UsernameInput:
                 # Activate selected button with spacebar
                 if self.selected_button == "generate":
                     self.username = self.generate_random_username()
+                    self.error_message = ""  # Clear any error
                 elif self.selected_button == "confirm":
-                    # Only confirm if username has at least 1 character
+                    # Validate username before confirming
                     if self.username.strip():
-                        return True
+                        is_valid, error_msg = validate_username(self.username)
+                        if is_valid:
+                            return True
+                        else:
+                            self.error_message = error_msg
+                            self.error_timer = 180  # Show error for 3 seconds
                     # If empty, ignore the spacebar
 
             else:
@@ -224,13 +244,19 @@ class UsernameInput:
             generate_rect = self.get_button_rect("generate")
             if generate_rect.collidepoint(mouse_pos):
                 self.username = self.generate_random_username()
+                self.error_message = ""  # Clear any error
                 return False
 
             # Confirm button - only clickable if username has at least 1 character
             confirm_rect = self.get_button_rect("confirm")
             if confirm_rect.collidepoint(mouse_pos):
                 if self.username.strip():
-                    return True
+                    is_valid, error_msg = validate_username(self.username)
+                    if is_valid:
+                        return True
+                    else:
+                        self.error_message = error_msg
+                        self.error_timer = 180  # Show error for 3 seconds
                 # If empty, don't do anything (ignore click)
 
         return False
@@ -241,6 +267,12 @@ class UsernameInput:
         if self.cursor_timer >= self.cursor_blink_rate:
             self.cursor_timer = 0
             self.cursor_visible = not self.cursor_visible
+
+        # Update error message timer
+        if self.error_timer > 0:
+            self.error_timer -= 1
+            if self.error_timer == 0:
+                self.error_message = ""
 
         # Update snowflakes
         for snowflake in self.snowflakes:
@@ -379,11 +411,25 @@ class UsernameInput:
         confirm_rect = self.get_button_rect("confirm")
         self.draw_button("CONFIRM", confirm_rect, "confirm", self.selected_button == "confirm")
 
-        # Draw hint text
-        hint_text = "PRESS ENTER TO CONFIRM"
-        hint_surface = self.hint_font.render(hint_text, True, self.ice_blue)
-        hint_rect = hint_surface.get_rect(center=(screen_width // 2, 430))
-        self.screen.blit(hint_surface, hint_rect)
+        # Draw error message if present
+        if self.error_message:
+            error_color = (255, 100, 100)  # Red color for errors
+            error_surface = self.hint_font.render(self.error_message, True, error_color)
+            error_rect = error_surface.get_rect(center=(screen_width // 2, 430))
+
+            # Draw a semi-transparent background behind error
+            error_bg = pygame.Surface((error_rect.width + 20, error_rect.height + 10))
+            error_bg.fill((80, 0, 0))
+            error_bg.set_alpha(150)
+            self.screen.blit(error_bg, (error_rect.x - 10, error_rect.y - 5))
+
+            self.screen.blit(error_surface, error_rect)
+        else:
+            # Draw hint text only if no error
+            hint_text = "PRESS ENTER TO CONFIRM"
+            hint_surface = self.hint_font.render(hint_text, True, self.ice_blue)
+            hint_rect = hint_surface.get_rect(center=(screen_width // 2, 430))
+            self.screen.blit(hint_surface, hint_rect)
 
         # Additional hint about max characters
         char_hint = f"MAX {self.max_length} CHARACTERS"
@@ -431,6 +477,7 @@ class PlayerProfileScreen:
 
         # Selection tracking
         self.button_hover = None
+        self.previous_button_hover = None  # Track for hover sound
 
         # Difficulty options
         self.difficulties = ["Easy", "Medium", "Hard"]
@@ -462,6 +509,36 @@ class PlayerProfileScreen:
         screen_height = screen.get_height()
         self.snowflakes = [Snowflake(screen_width, screen_height) for _ in range(50)]
 
+        # Load select sounds (hover and click)
+        self.select_sound = None
+        self.select_click_sound = None
+        if S.MASTER_AUDIO_ENABLED:
+            try:
+                self.select_sound = pygame.mixer.Sound("assets/sounds/select_fast.wav")
+                self.select_sound.set_volume(0.4)
+            except (FileNotFoundError, pygame.error):
+                pass
+            try:
+                self.select_click_sound = pygame.mixer.Sound("assets/sounds/select_click.wav")
+                self.select_click_sound.set_volume(0.4)
+            except (FileNotFoundError, pygame.error):
+                pass
+
+    def play_select_sound(self, volume=0.3, use_click=False):
+        """Play the select sound effect with specified volume
+
+        Args:
+            volume: Volume level (0.0 to 1.0)
+            use_click: If True, use higher-pitched click sound; if False, use hover sound
+        """
+        sound = self.select_click_sound if use_click else self.select_sound
+        if sound:
+            try:
+                sound.set_volume(volume)
+                sound.play()
+            except pygame.error:
+                pass
+
     def get_username_box_rect(self):
         """Get rect for username input box"""
         screen_width = self.screen.get_width()
@@ -491,6 +568,7 @@ class PlayerProfileScreen:
         if event.type == pygame.KEYDOWN:
             # Handle navigation with arrow keys
             if event.key == pygame.K_ESCAPE or event.key == pygame.K_RETURN:
+                self.play_select_sound(use_click=True)  # Click sound for exiting
                 return "BACK"
 
             elif event.key in (pygame.K_LEFT, pygame.K_RIGHT):
@@ -501,10 +579,12 @@ class PlayerProfileScreen:
                 else:  # RIGHT
                     current_index = (current_index + 1) % len(self.difficulties)
                 self.difficulty = self.difficulties[current_index]
+                self.play_select_sound(volume=0.08)  # Hover sound for navigation
 
             elif event.key == pygame.K_SPACE or event.key == pygame.K_c:
                 # Toggle checkpoints with spacebar or C key
                 self.checkpoints_enabled = not self.checkpoints_enabled
+                self.play_select_sound(use_click=True)  # Click sound for toggle
 
         elif event.type == pygame.MOUSEMOTION:
             mouse_pos = pygame.mouse.get_pos()
@@ -533,6 +613,11 @@ class PlayerProfileScreen:
                 if back_rect.collidepoint(scaled_pos):
                     self.button_hover = "BACK"
 
+            # Play hover sound if hovering over a new button
+            if self.button_hover and self.button_hover != self.previous_button_hover:
+                self.play_select_sound(volume=0.08)
+            self.previous_button_hover = self.button_hover
+
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_pos = pygame.mouse.get_pos()
             # Scale mouse position to internal coordinates
@@ -543,17 +628,20 @@ class PlayerProfileScreen:
                 rect = self.get_difficulty_button_rect(difficulty)
                 if rect.collidepoint(scaled_pos):
                     self.difficulty = difficulty
+                    self.play_select_sound(use_click=True)  # Click sound for selecting difficulty
                     return None
 
             # Check checkpoints toggle
             checkpoints_rect = self.get_checkpoints_toggle_rect()
             if checkpoints_rect.collidepoint(scaled_pos):
                 self.checkpoints_enabled = not self.checkpoints_enabled
+                self.play_select_sound(use_click=True)  # Click sound for toggle
                 return None
 
             # Check back button
             back_rect = self.get_back_button_rect()
             if back_rect.collidepoint(scaled_pos):
+                self.play_select_sound(use_click=True)  # Click sound for back
                 return "BACK"
 
         return None

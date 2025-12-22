@@ -59,7 +59,7 @@ class AudioManager:
             sound_names = [
                 'death', 'stage_clear', 'jump', 'double_jump',
                 'coin', 'bump', 'land_enemy', 'land_slime',
-                'enemy_projectile', 'spin_attack', 'select', 'roll'
+                'enemy_projectile', 'spin_attack', 'select', 'select_click', 'roll'
             ]
             for name in sound_names:
                 self.sounds[name] = None
@@ -77,8 +77,9 @@ class AudioManager:
             'land_slime': (["assets/sounds/land_slime.ogg"], 0.3),
             'enemy_projectile': (["assets/sounds/enemy_projectile.ogg"], 0.2),
             'spin_attack': (["assets/sounds/spin_attack.ogg"], 0.3),
-            'select': (["assets/sounds/select.wav"], 0.4),
-            'roll': (["assets/sounds/roll.wav"], 0.15),  # Quiet for looping
+            'select': (["assets/sounds/select_fast.wav"], 0.4),  # Hover sound
+            'select_click': (["assets/sounds/select_click.wav"], 0.4),  # Click sound (higher pitch)
+            'roll': (["assets/sounds/roll_pitched.wav"], 0.15),  # Higher pitch, 3.5x speed, 3x pitch
         }
 
         # Load each sound
@@ -148,13 +149,14 @@ class AudioManager:
             except Exception as e:
                 print(f"Could not unpause music: {e}")
 
-    def play_sound(self, sound_name, loops=0):
+    def play_sound(self, sound_name, loops=0, volume=None):
         """
         Play a sound effect by name
 
         Args:
             sound_name: Name of the sound to play (e.g., 'jump', 'coin', 'death')
             loops: Number of times to loop (-1 for infinite, 0 for once)
+            volume: Optional volume override (0.0 to 1.0). If None, uses default volume.
 
         Returns:
             pygame.mixer.Channel or None: The channel the sound is playing on, or None if failed
@@ -165,7 +167,16 @@ class AudioManager:
         sound = self.sounds.get(sound_name)
         if sound:
             try:
-                return sound.play(loops=loops)
+                # Temporarily set volume if specified
+                if volume is not None:
+                    original_volume = sound.get_volume()
+                    sound.set_volume(volume)
+                    channel = sound.play(loops=loops)
+                    # Restore original volume after playing
+                    sound.set_volume(original_volume)
+                    return channel
+                else:
+                    return sound.play(loops=loops)
             except Exception as e:
                 print(f"Could not play sound '{sound_name}': {e}")
                 return None
