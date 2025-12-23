@@ -16,7 +16,7 @@ a = Analysis(
         ('src', 'src'),
         ('VERSION', '.'),  # Include version file
         ('.env', '.'),  # Include Firebase configuration
-        ('firebase-key.json', '.'),  # Include Firebase credentials
+        # Note: firebase-key.json not needed - game uses REST API, not admin SDK
     ],
     hiddenimports=[],
     hookspath=[],
