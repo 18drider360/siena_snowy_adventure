@@ -1,8 +1,14 @@
 import pygame
 import webbrowser
+import threading
+import platform
 from src.utils import settings as S
 from src.ui.winter_theme import Snowflake, WinterTheme
 from src.utils.update_checker_secure import get_update_checker
+from src.utils.auto_updater import UpdateDownloader, format_size, calculate_progress_percent
+from src.core.game_logging import get_logger
+
+logger = get_logger(__name__)
 
 class TitleScreen:
     """Main title screen with Mario Bros-style presentation"""
@@ -17,12 +23,25 @@ class TitleScreen:
         self.settings_hover = False
         self.previous_settings_hover = False  # Track for hover sound
 
-        # Update checker
+        # Update checker (only on macOS - Windows auto-updates not yet implemented)
         self.update_checker = get_update_checker()
         self.update_available = None  # Will be (version, url, changelog) tuple or None
         self.update_button_hover = False
-        self.checking_update = True  # Start checking on init
-        self._check_for_update()  # Check immediately
+
+        # Only check for updates on macOS where auto-update is implemented
+        if platform.system() == "Darwin":
+            self.checking_update = True  # Start checking on init
+            self._check_for_update()  # Check immediately
+        else:
+            self.checking_update = False  # Disable on Windows/other platforms
+
+        # Auto-updater state
+        self.updater = UpdateDownloader()
+        self.update_state = "idle"  # States: idle, downloading, extracting, ready, error
+        self.download_progress = 0  # 0-100
+        self.download_current = 0  # Bytes downloaded
+        self.download_total = 0  # Total bytes
+        self.update_error = None  # Error message if any
 
         # Load select sounds (hover and click)
         self.select_sound = None
@@ -76,8 +95,6 @@ class TitleScreen:
 
     def _check_for_update(self):
         """Check for updates in background"""
-        import threading
-
         def check():
             self.update_available = self.update_checker.check_for_update()
             self.checking_update = False
@@ -88,10 +105,77 @@ class TitleScreen:
         else:
             self.checking_update = False
 
+    def _update_progress_callback(self, downloaded, total):
+        """Callback for download progress updates"""
+        self.download_current = downloaded
+        self.download_total = total
+        self.download_progress = calculate_progress_percent(downloaded, total)
+
+    def _start_auto_update(self):
+        """Start the auto-update process in background thread"""
+        if not self.update_available:
+            return
+
+        version, url, changelog = self.update_available
+
+        def update_thread():
+            try:
+                logger.info(f"Starting auto-update to version {version}")
+                self.update_state = "downloading"
+                self.update_error = None
+
+                # Set progress callback
+                self.updater.set_progress_callback(self._update_progress_callback)
+
+                # Download update
+                success = self.updater.download_update(url, expected_size_mb=85)
+                if not success:
+                    self.update_state = "error"
+                    self.update_error = "Failed to download update"
+                    logger.error("Download failed")
+                    return
+
+                # Extract update
+                self.update_state = "extracting"
+                logger.info("Extracting update...")
+                success = self.updater.extract_update()
+                if not success:
+                    self.update_state = "error"
+                    self.update_error = "Failed to extract update"
+                    logger.error("Extraction failed")
+                    return
+
+                # Ready to install
+                self.update_state = "ready"
+                logger.info("Update ready to install")
+
+                # Launch installer (this will quit the app)
+                import time
+                time.sleep(1)  # Give user a moment to see "ready" message
+                success = self.updater.launch_installer()
+                if success:
+                    # Installer launched successfully
+                    # Mark state to trigger quit from main thread
+                    self.update_state = "quitting"
+                    logger.info("Installer launched, will quit from main thread...")
+                else:
+                    self.update_state = "error"
+                    self.update_error = "Cannot auto-update in dev mode"
+                    logger.warning("Not running as .app bundle - cannot auto-update")
+
+            except Exception as e:
+                self.update_state = "error"
+                self.update_error = f"Update error: {str(e)}"
+                logger.error(f"Auto-update failed: {e}")
+
+        # Start update in background thread
+        thread = threading.Thread(target=update_thread, daemon=True)
+        thread.start()
+
     def get_update_button_rect(self):
         """Get the rect for the update notification button"""
-        button_width = 420
-        button_height = 40
+        button_width = 620  # Increased from 420 to fit text
+        button_height = 50  # Increased from 40 for better visibility
         padding = 20
         return pygame.Rect(
             (S.WINDOW_WIDTH - button_width) // 2,
@@ -184,19 +268,12 @@ class TitleScreen:
             scaled_pos = (int(mouse_pos[0] / S.DISPLAY_SCALE), int(mouse_pos[1] / S.DISPLAY_SCALE))
 
             # Check update button click
-            if self.update_available:
+            if self.update_available and self.update_state == "idle":
                 update_rect = self.get_update_button_rect()
                 if update_rect.collidepoint(scaled_pos):
                     self.play_select_sound(use_click=True)
-                    # Open download URL in browser
-                    version, url, changelog = self.update_available
-                    if url:
-                        try:
-                            webbrowser.open(url)
-                        except Exception as e:
-                            from src.core.game_logging import get_logger
-                            logger = get_logger(__name__)
-                            logger.error(f"Failed to open browser: {e}")
+                    # Start auto-update
+                    self._start_auto_update()
                     return None
 
             # Check settings icon click
@@ -353,9 +430,37 @@ class TitleScreen:
             text_rect = text.get_rect(center=(x + box_width // 2, y + box_height // 2))
             screen.blit(text, text_rect)
     
+    def draw_staging_indicator(self, screen):
+        """Draw staging mode indicator banner at top of screen"""
+        if self.update_checker.is_available() and self.update_checker.get_update_channel() == 'staging':
+            # Draw orange/yellow warning banner at top
+            banner_height = 30
+            banner_rect = pygame.Rect(0, 0, S.WINDOW_WIDTH, banner_height)
+            pygame.draw.rect(screen, (255, 165, 0), banner_rect)  # Orange
+            pygame.draw.rect(screen, (200, 130, 0), banner_rect, 2)  # Border
+
+            # Draw text
+            try:
+                font = pygame.font.Font("assets/fonts/PressStart2P-Regular.ttf", 10)
+            except:
+                font = pygame.font.Font(None, 16)
+
+            text = font.render("STAGING MODE - Testing Updates", True, (255, 255, 255))
+            text_rect = text.get_rect(center=(S.WINDOW_WIDTH // 2, banner_height // 2))
+            screen.blit(text, text_rect)
+
     def draw_footer(self, screen):
-        """Draw footer - removed navigation hints"""
-        pass  # No footer text needed
+        """Draw footer with version number and staging indicator"""
+        # Display version number in bottom left
+        version_font = pygame.font.Font(None, 24)
+
+        # Build version text with staging indicator if applicable
+        version_text_str = f"v{S.CURRENT_VERSION}"
+        if self.update_checker.is_available() and self.update_checker.get_update_channel() == 'staging':
+            version_text_str += " [STAGING]"
+
+        version_text = version_font.render(version_text_str, True, (100, 100, 100))
+        screen.blit(version_text, (10, S.WINDOW_HEIGHT - 30))
     
     def update(self):
         """Update animations"""
@@ -410,41 +515,117 @@ class TitleScreen:
         screen.blit(settings_text, text_rect)
 
     def draw_update_notification(self, screen):
-        """Draw update notification banner at top of screen"""
+        """Draw update notification banner at top of screen with progress"""
         if not self.update_available:
             return
 
         version, url, changelog = self.update_available
         rect = self.get_update_button_rect()
 
-        # Banner colors (bright blue for visibility)
-        if self.update_button_hover:
-            bg_color = (30, 144, 255)  # Brighter blue when hovering
-            border_color = (0, 100, 200)
-        else:
-            bg_color = (70, 130, 220)  # Royal blue
-            border_color = (40, 80, 150)
+        # Determine colors and text based on update state
+        if self.update_state == "error":
+            bg_color = (200, 50, 50)  # Red for error
+            border_color = (150, 30, 30)
+            text = f"UPDATE ERROR: {self.update_error or 'Unknown error'}"
+        elif self.update_state == "quitting":
+            bg_color = (50, 200, 50)  # Green for quitting
+            border_color = (30, 150, 30)
+            text = "Update installed! Restarting game..."
+        elif self.update_state == "ready":
+            bg_color = (50, 200, 50)  # Green for ready
+            border_color = (30, 150, 30)
+            text = "Update ready! Installing..."
+        elif self.update_state == "extracting":
+            bg_color = (255, 165, 0)  # Orange for extracting
+            border_color = (200, 130, 0)
+            text = "Extracting update..."
+        elif self.update_state == "downloading":
+            bg_color = (255, 165, 0)  # Orange for downloading
+            border_color = (200, 130, 0)
+            text = f"Downloading: {self.download_progress}% ({format_size(self.download_current)} / {format_size(self.download_total)})"
+        else:  # idle
+            if self.update_button_hover:
+                bg_color = (30, 144, 255)  # Brighter blue when hovering
+                border_color = (0, 100, 200)
+            else:
+                bg_color = (70, 130, 220)  # Royal blue
+                border_color = (40, 80, 150)
+            text = f"UPDATE AVAILABLE: v{version} - Click to Update"
 
         # Draw banner background
         pygame.draw.rect(screen, bg_color, rect, border_radius=8)
         pygame.draw.rect(screen, border_color, rect, 3, border_radius=8)
 
+        # Draw warning triangles on both sides
+        triangle_size = 30
+        triangle_padding = 50  # Moved closer to center
+
+        # Left triangle
+        left_triangle_x = rect.x + triangle_padding
+        left_triangle_y = rect.centery
+        left_points = [
+            (left_triangle_x, left_triangle_y - triangle_size // 2),  # Top
+            (left_triangle_x - triangle_size // 2, left_triangle_y + triangle_size // 2),  # Bottom left
+            (left_triangle_x + triangle_size // 2, left_triangle_y + triangle_size // 2)   # Bottom right
+        ]
+        pygame.draw.polygon(screen, (255, 220, 0), left_points)  # Yellow triangle
+        pygame.draw.polygon(screen, (200, 160, 0), left_points, 2)  # Dark outline
+
+        # Right triangle
+        right_triangle_x = rect.right - triangle_padding
+        right_triangle_y = rect.centery
+        right_points = [
+            (right_triangle_x, right_triangle_y - triangle_size // 2),  # Top
+            (right_triangle_x - triangle_size // 2, right_triangle_y + triangle_size // 2),  # Bottom left
+            (right_triangle_x + triangle_size // 2, right_triangle_y + triangle_size // 2)   # Bottom right
+        ]
+        pygame.draw.polygon(screen, (255, 220, 0), right_points)  # Yellow triangle
+        pygame.draw.polygon(screen, (200, 160, 0), right_points, 2)  # Dark outline
+
+        # Draw exclamation points in triangles
+        try:
+            exclamation_font = pygame.font.Font("assets/fonts/PressStart2P-Regular.ttf", 14)
+        except:
+            exclamation_font = pygame.font.Font(None, 20)
+
+        exclamation = exclamation_font.render("!", True, (0, 0, 0))
+
+        # Left exclamation
+        left_exclamation_rect = exclamation.get_rect(center=(left_triangle_x, left_triangle_y + 2))
+        screen.blit(exclamation, left_exclamation_rect)
+
+        # Right exclamation
+        right_exclamation_rect = exclamation.get_rect(center=(right_triangle_x, right_triangle_y + 2))
+        screen.blit(exclamation, right_exclamation_rect)
+
+        # Draw progress bar if downloading
+        if self.update_state == "downloading" and self.download_progress > 0:
+            progress_rect = pygame.Rect(
+                rect.x + 5,
+                rect.y + rect.height - 8,
+                int((rect.width - 10) * (self.download_progress / 100)),
+                4
+            )
+            pygame.draw.rect(screen, (100, 255, 100), progress_rect, border_radius=2)
+
         # Draw text
         try:
-            small_font = pygame.font.Font("assets/fonts/PressStart2P-Regular.ttf", 12)
+            small_font = pygame.font.Font("assets/fonts/PressStart2P-Regular.ttf", 10)
         except:
-            small_font = pygame.font.Font(None, 20)
+            small_font = pygame.font.Font(None, 16)
 
-        text = f"UPDATE AVAILABLE: v{version} - Click to Download"
         text_surface = small_font.render(text, True, (255, 255, 255))
-        text_rect = text_surface.get_rect(center=rect.center)
+        text_rect = text_surface.get_rect(center=(rect.centerx, rect.centery - 2))
         screen.blit(text_surface, text_rect)
 
     def draw(self, screen):
         """Draw the complete title screen"""
         # Winter sky background (lighter blue/white)
         screen.fill((200, 220, 255))
-        
+
+        # Draw staging indicator FIRST (so it's at the top)
+        self.draw_staging_indicator(screen)
+
         # Draw falling snow
         self.draw_snow(screen)
         
