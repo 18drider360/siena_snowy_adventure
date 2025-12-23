@@ -18,7 +18,7 @@ a = Analysis(
         ('.env', '.'),  # Include Firebase configuration
         # Note: firebase-key.json not needed - game uses REST API, not admin SDK
     ],
-    hiddenimports=[],
+    hiddenimports=['dotenv', 'dotenv.main'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
