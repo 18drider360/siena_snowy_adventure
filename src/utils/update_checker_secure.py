@@ -40,6 +40,9 @@ def _make_request(req, timeout=10):
 # Flag to enable/disable update checks (default to enabled)
 UPDATE_CHECK_ENABLED = os.environ.get('SIENA_UPDATE_CHECK_ENABLED', 'true').lower() == 'true'
 
+# Update channel: 'production' (default) or 'staging' for testing
+UPDATE_CHANNEL = os.environ.get('UPDATE_CHANNEL', 'production').lower()
+
 
 class UpdateChecker:
     """Checks for game updates against Firebase using secure REST API"""
@@ -49,6 +52,7 @@ class UpdateChecker:
         self.initialized = False
         self.base_url = None
         self.current_version = self._load_current_version()
+        self.update_channel = UPDATE_CHANNEL
 
         if not UPDATE_CHECK_ENABLED:
             logger.info("Update checking disabled (SIENA_UPDATE_CHECK_ENABLED not set)")
@@ -64,7 +68,7 @@ class UpdateChecker:
         # Remove trailing slash if present
         self.base_url = firebase_url.rstrip('/')
         self.initialized = True
-        logger.info(f"Update checker initialized (current version: {self.current_version})")
+        logger.info(f"Update checker initialized (channel: {self.update_channel}, version: {self.current_version})")
 
     def _load_current_version(self) -> str:
         """Load current version from VERSION file"""
@@ -92,6 +96,10 @@ class UpdateChecker:
         """Check if update checker is available"""
         return self.initialized and self.base_url is not None
 
+    def get_update_channel(self) -> str:
+        """Get the current update channel (production or staging)"""
+        return self.update_channel
+
     def check_for_update(self) -> Optional[Tuple[str, str, str]]:
         """
         Check if a new version is available using REST API
@@ -105,7 +113,11 @@ class UpdateChecker:
 
         try:
             # Fetch version info from Firebase using REST API
-            url = f"{self.base_url}/version.json"
+            # Use channel-specific endpoint (staging or production)
+            if self.update_channel == 'staging':
+                url = f"{self.base_url}/version-staging.json"
+            else:
+                url = f"{self.base_url}/version.json"
 
             req = urllib.request.Request(url, method='GET')
 
@@ -143,7 +155,7 @@ class UpdateChecker:
 
     def _is_newer_version(self, latest: str, current: str) -> bool:
         """
-        Compare semantic versions (e.g., "1.2.3")
+        Compare semantic versions (e.g., "1.2.3", "1.2.3-beta")
 
         Args:
             latest: Latest version string
@@ -153,9 +165,17 @@ class UpdateChecker:
             True if latest is newer than current
         """
         try:
+            # Strip version suffixes like -beta, -rc1, etc. for comparison
+            def strip_suffix(version: str) -> str:
+                # Split on '-' and take only the numeric part
+                return version.split('-')[0]
+
+            latest_clean = strip_suffix(latest)
+            current_clean = strip_suffix(current)
+
             # Parse semantic versions
-            latest_parts = [int(x) for x in latest.split('.')]
-            current_parts = [int(x) for x in current.split('.')]
+            latest_parts = [int(x) for x in latest_clean.split('.')]
+            current_parts = [int(x) for x in current_clean.split('.')]
 
             # Pad shorter version with zeros
             while len(latest_parts) < 3:

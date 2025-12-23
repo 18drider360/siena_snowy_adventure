@@ -16,7 +16,7 @@ else:
 
 # Core systems
 from src.core.game_logging import get_logger
-from src.core.audio_manager import AudioManager
+from src.core.audio_manager import AudioManager, get_audio_manager
 from src.core.font_manager import FontManager
 from src.core import collision_physics as collision
 from src.core import constants as C
@@ -1213,9 +1213,20 @@ def main(progression):
         roll_stamina_ui.draw(screen, player, camera_x)
         spin_charge_ui.draw(screen, player, camera_x)
         
-        # Draw game HUD (coins, world, time, difficulty, coins remaining)
-        coins_remaining = progression.get_coins_remaining(progression.current_level, coins_collected)
-        draw_game_hud(screen, coins_collected, level_time, world_name, progression.difficulty, coins_remaining)
+        # Draw game HUD (coins, world, time, difficulty, coins needed, distance)
+        coins_requirement = progression.get_coin_requirement(progression.current_level)
+        coins_still_needed = max(0, coins_requirement - coins_collected)
+        coins_remaining_in_level = len(coins)  # Count uncollected coins still in the sprite group
+        distance_to_goal = 0
+        max_distance = 100  # Default for color scaling
+        if goal_npc:
+            # player.rect.x is already in world coordinates (camera_x is subtracted during rendering)
+            player_world_x = player.rect.x
+            goal_world_x = goal_npc.trigger_zone.left
+            distance_to_goal = max(0, int(goal_world_x - player_world_x - 102))  # Subtract 102 for accurate distance
+            # Calculate max_distance as the goal position (for color scaling)
+            max_distance = goal_world_x
+        draw_game_hud(screen, coins_collected, level_time, world_name, progression.difficulty, coins_still_needed, coins_remaining_in_level, distance_to_goal, max_distance)
         
         # --- DEBUG: DRAW PLAYER POSITION ---
         if SHOW_HITBOXES:  # Only show when hitboxes are enabled
@@ -1320,8 +1331,8 @@ if __name__ == "__main__":
     
     # Main game loop - keeps running until player quits
     while True:
-        # Show title screen and get selection
-        result = show_title_screen(progression)
+        # Show title screen and get selection (disable audio if MASTER_AUDIO_ENABLED is False)
+        result = show_title_screen(progression, disable_audio=not S.MASTER_AUDIO_ENABLED)
         
         # If user closed window during title screen, exit
         if result is None:
@@ -1347,26 +1358,25 @@ if __name__ == "__main__":
         while playing:
             # Show opening story + Level 1 intro before Level 1 (only once per game session)
             if progression.current_level == 1 and 'opening' not in stories_shown:
-                show_story_cutscene('opening')
+                show_story_cutscene('opening', disable_audio=not S.MASTER_AUDIO_ENABLED)
                 stories_shown.add('opening')
 
                 # Also show Level 1 intro after opening
                 if 'level_1_intro' not in stories_shown:
-                    show_story_cutscene('level_1_intro')
+                    show_story_cutscene('level_1_intro', disable_audio=not S.MASTER_AUDIO_ENABLED)
                     stories_shown.add('level_1_intro')
 
             # Show level transition and tutorial screens for this level if not yet shown
             if progression.current_level not in tutorials_shown:
-                show_level_transition(progression.current_level)
+                show_level_transition(progression.current_level, disable_audio=not S.MASTER_AUDIO_ENABLED)
                 tutorials_shown.add(progression.current_level)
 
                 # Switch back to gameplay music after tutorials
                 if not DISABLE_ALL_AUDIO:
                     try:
                         import src.rendering.game_screens as gs
-                        pygame.mixer.music.load("assets/music/main_theme.ogg")
-                        pygame.mixer.music.set_volume(0.6)
-                        pygame.mixer.music.play(-1)
+                        audio_mgr = get_audio_manager()
+                        audio_mgr.load_and_play_music("assets/music/main_theme.ogg", volume=0.6, loop=True)
                         gs._current_music_track = "main_theme.ogg"  # Update tracker
                     except Exception as e:
                         logger.debug(f"Could not load gameplay music: {e}")
@@ -1387,31 +1397,30 @@ if __name__ == "__main__":
                 # Show post-level story cutscene for completed level (only if not shown yet)
                 post_level_key = f'level_{completed_level}_complete'
                 if post_level_key not in stories_shown:
-                    show_story_cutscene(post_level_key)
+                    show_story_cutscene(post_level_key, disable_audio=not S.MASTER_AUDIO_ENABLED)
                     stories_shown.add(post_level_key)
 
                 # If Level 4 was just completed, show ending (only once)
                 if completed_level == 4 and 'ending' not in stories_shown:
-                    show_story_cutscene('ending')
+                    show_story_cutscene('ending', disable_audio=not S.MASTER_AUDIO_ENABLED)
                     stories_shown.add('ending')
 
                 # Show pre-level story cutscene for NEXT level (only once per level)
                 pre_level_key = f'level_{progression.current_level}_intro'
                 if pre_level_key not in stories_shown:
-                    show_story_cutscene(pre_level_key)
+                    show_story_cutscene(pre_level_key, disable_audio=not S.MASTER_AUDIO_ENABLED)
                     stories_shown.add(pre_level_key)
 
                 # Show transition screen for next level
-                show_level_transition(progression.current_level)
+                show_level_transition(progression.current_level, disable_audio=not S.MASTER_AUDIO_ENABLED)
                 tutorials_shown.add(progression.current_level)
 
                 # Switch back to gameplay music after tutorials
                 if not DISABLE_ALL_AUDIO:
                     try:
                         import src.rendering.game_screens as gs
-                        pygame.mixer.music.load("assets/music/main_theme.ogg")
-                        pygame.mixer.music.set_volume(0.6)
-                        pygame.mixer.music.play(-1)
+                        audio_mgr = get_audio_manager()
+                        audio_mgr.load_and_play_music("assets/music/main_theme.ogg", volume=0.6, loop=True)
                         gs._current_music_track = "main_theme.ogg"  # Update tracker
                     except Exception as e:
                         logger.debug(f"Could not load gameplay music: {e}")
@@ -1427,12 +1436,12 @@ if __name__ == "__main__":
                 # Show post-level story cutscene (only if not shown yet)
                 post_level_key = f'level_{completed_level}_complete'
                 if post_level_key not in stories_shown:
-                    show_story_cutscene(post_level_key)
+                    show_story_cutscene(post_level_key, disable_audio=not S.MASTER_AUDIO_ENABLED)
                     stories_shown.add(post_level_key)
 
                 # If Level 4, show ending (only once)
                 if completed_level == 4 and 'ending' not in stories_shown:
-                    show_story_cutscene('ending')
+                    show_story_cutscene('ending', disable_audio=not S.MASTER_AUDIO_ENABLED)
                     stories_shown.add('ending')
 
                 playing = False

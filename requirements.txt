@@ -5,3 +5,4 @@ pyyaml>=6.0
 # Development dependencies (optional)
 pytest>=7.0  # for running tests
 pyinstaller>=6.0  # for building standalone executables
+pyarmor>=9.2  # for code obfuscation (trial version has file size limits)

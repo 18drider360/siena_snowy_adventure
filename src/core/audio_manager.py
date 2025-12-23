@@ -9,6 +9,22 @@ from src.core.game_logging import get_logger
 
 logger = get_logger(__name__)
 
+# Global singleton instance
+_audio_manager_instance = None
+
+
+def get_audio_manager():
+    """
+    Get the global AudioManager instance (singleton pattern)
+
+    Returns:
+        AudioManager: The global audio manager instance
+    """
+    global _audio_manager_instance
+    if _audio_manager_instance is None:
+        _audio_manager_instance = AudioManager()
+    return _audio_manager_instance
+
 
 class AudioManager:
     """Manages all game audio including music and sound effects"""

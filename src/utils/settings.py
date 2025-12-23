@@ -1,6 +1,28 @@
 # utils/settings.py
 # Game settings and constants
 
+import os
+
+# Load version from VERSION file
+def _load_version():
+    import sys
+    # Handle PyInstaller bundles
+    if getattr(sys, 'frozen', False):
+        # Running as PyInstaller bundle
+        bundle_dir = sys._MEIPASS
+        version_file = os.path.join(bundle_dir, 'VERSION')
+    else:
+        # Running from source
+        version_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'VERSION')
+
+    try:
+        with open(version_file, 'r') as f:
+            return f.read().strip()
+    except:
+        return "1.1.2"  # Fallback version
+
+CURRENT_VERSION = _load_version()
+
 # Game render resolution (internal resolution)
 WINDOW_WIDTH = 1000  # Increased from 800 to show more horizontally
 WINDOW_HEIGHT = 600

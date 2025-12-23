@@ -1338,7 +1338,7 @@ def draw_death_screen(screen):
     screen.blit(text1, text1_rect)
     screen.blit(text2, text2_rect)
 
-def draw_game_hud(screen, coins_collected, level_time, world_name, difficulty="Medium", coins_remaining=0):
+def draw_game_hud(screen, coins_collected, level_time, world_name, difficulty="Medium", coins_still_needed=0, coins_remaining_in_level=0, distance_to_goal=0, max_distance=5500):
     """Draw the top HUD with coins, world, and time like Super Mario"""
     # Load Fixedsys font
     try:
@@ -1392,13 +1392,36 @@ def draw_game_hud(screen, coins_collected, level_time, world_name, difficulty="M
     time_value_x = time_label_x + (time_text.get_width() - time_value.get_width()) // 2
     screen.blit(time_value, (time_value_x, 40))
 
-    # Difficulty and coins remaining (top left, below hearts)
+    # Difficulty and coins needed (top left, below hearts)
     difficulty_text = small_font.render(f"Difficulty: {difficulty.upper()}", True, text_color)
     screen.blit(difficulty_text, (20, 75))
 
-    # Coins remaining on second line
-    coins_text = small_font.render(f"({coins_remaining} coins remaining)", True, text_color)
-    screen.blit(coins_text, (20, 95))
+    # Coins needed on second line - color based on goal completion
+    if coins_still_needed > 0:
+        coins_needed_color = (255, 50, 50)  # Red - goal not reached
+    else:
+        coins_needed_color = (50, 255, 50)  # Green - goal reached
+
+    coins_needed_text = small_font.render(f"Coins Needed: {coins_still_needed}/{coins_remaining_in_level}", True, coins_needed_color)
+    screen.blit(coins_needed_text, (20, 95))
+
+    # Distance to finish on third line with color gradient (red -> yellow -> green)
+    # Calculate color based on distance (0% = green, 100% = red)
+    distance_ratio = min(1.0, distance_to_goal / max_distance) if max_distance > 0 else 0
+
+    if distance_ratio > 0.5:
+        # Red to Yellow transition (far away)
+        # distance_ratio: 0.5 to 1.0 -> red to yellow
+        t = (distance_ratio - 0.5) * 2  # 0.0 to 1.0
+        distance_color = (255, int(255 * (1 - t)), 0)  # Red to Yellow
+    else:
+        # Yellow to Green transition (getting close)
+        # distance_ratio: 0.0 to 0.5 -> green to yellow
+        t = distance_ratio * 2  # 0.0 to 1.0
+        distance_color = (int(255 * t), 255, 0)  # Green to Yellow
+
+    distance_text = small_font.render(f"{distance_to_goal}m to finish", True, distance_color)
+    screen.blit(distance_text, (20, 115))
 
 
 def draw_debug_coordinates(screen, player, platforms, camera_x, camera_y):

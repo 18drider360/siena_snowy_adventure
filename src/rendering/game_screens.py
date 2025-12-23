@@ -6,6 +6,7 @@ Handles title screen, level transitions, and educational screens
 import sys
 import pygame
 from src.utils import settings as S
+from src.core.audio_manager import get_audio_manager
 from src.rendering.screens.title_screen import TitleScreen, LevelSelectScreen, GuideScreen
 from src.ui.scoreboard import show_scoreboard
 from src.ui.username_input import PlayerProfileScreen
@@ -273,9 +274,8 @@ def show_story_cutscene(story_key, disable_audio=False):
         try:
             # Only load dialogue.wav if we're not already playing it
             if _current_music_track != "dialogue.wav":
-                pygame.mixer.music.load("assets/music/dialogue.wav")
-                pygame.mixer.music.set_volume(0.5)
-                pygame.mixer.music.play(-1)  # Loop indefinitely
+                audio_mgr = get_audio_manager()
+                audio_mgr.load_and_play_music("assets/music/dialogue.wav", volume=0.5, loop=True)
                 _current_music_track = "dialogue.wav"
         except Exception as e:
             print(f"Could not load cutscene music: {e}")
@@ -336,9 +336,8 @@ def show_title_screen(progression, disable_audio=False):
             # Only load Oh Xmas if not already playing it
             if _current_music_track != "Oh Xmas.mp3":
                 # Title screen uses Oh Xmas.mp3
-                pygame.mixer.music.load("assets/music/Oh Xmas.mp3")
-                pygame.mixer.music.set_volume(0.6)
-                pygame.mixer.music.play(-1)  # Loop forever
+                audio_mgr = get_audio_manager()
+                audio_mgr.load_and_play_music("assets/music/Oh Xmas.mp3", volume=0.6, loop=True)
                 _current_music_track = "Oh Xmas.mp3"
         except Exception as e:
             print(f"Could not load title music: {e}")
@@ -405,6 +404,12 @@ def show_title_screen(progression, disable_audio=False):
                 if result == "BACK":
                     current_screen = "TITLE"
 
+        # Check if auto-updater wants to quit the game
+        if current_screen == "TITLE" and title_screen.update_state == "quitting":
+            # Quit the game so installer can complete
+            pygame.quit()
+            sys.exit(0)
+
         # Update and draw current screen
         if current_screen == "TITLE":
             title_screen.update()
@@ -448,9 +453,8 @@ def show_educational_screens(next_level_num, disable_audio=False):
         try:
             # Only load dialogue.wav if somehow it's not already playing
             if _current_music_track != "dialogue.wav":
-                pygame.mixer.music.load("assets/music/dialogue.wav")
-                pygame.mixer.music.set_volume(0.5)
-                pygame.mixer.music.play(-1)  # Loop forever
+                audio_mgr = get_audio_manager()
+                audio_mgr.load_and_play_music("assets/music/dialogue.wav", volume=0.5, loop=True)
                 _current_music_track = "dialogue.wav"
         except Exception as e:
             print(f"Could not load dialogue music: {e}")
@@ -536,9 +540,8 @@ def show_level_transition(next_level_num, disable_audio=False):
         try:
             # Only load dialogue.wav if we're not already playing it
             if _current_music_track != "dialogue.wav":
-                pygame.mixer.music.load("assets/music/dialogue.wav")
-                pygame.mixer.music.set_volume(0.5)
-                pygame.mixer.music.play(-1)  # Loop indefinitely
+                audio_mgr = get_audio_manager()
+                audio_mgr.load_and_play_music("assets/music/dialogue.wav", volume=0.5, loop=True)
                 _current_music_track = "dialogue.wav"
         except Exception as e:
             print(f"Could not load dialogue music: {e}")

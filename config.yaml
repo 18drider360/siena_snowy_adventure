@@ -14,9 +14,9 @@ display:
 
 # === AUDIO SETTINGS ===
 audio:
-  master_enabled: true  # Master switch for all audio
-  music_enabled: true
-  sound_enabled: true
+  master_enabled: false  # Master switch for all audio
+  music_enabled: false
+  sound_enabled: false
   music_volume: 0.6
   sound_volume: 1.0
 
