@@ -369,9 +369,9 @@ echo "Clearing Launch Services cache..."
 # Wait a moment for cache to clear
 sleep 2
 
-# Launch new version with explicit path to executable
+# Launch new version using macOS 'open' command (more reliable than direct exec)
 echo "Launching new version..."
-"$INSTALLED_APP/Contents/MacOS/SienaSnowyAdventure" &
+open "$INSTALLED_APP"
 
 # Clean up temp directory (after a delay)
 sleep 2
