@@ -36,8 +36,8 @@ APP_NAME="SienaSnowyAdventure.app"
 echo -e "${BLUE}[2/5]${NC} Downloading the latest version..."
 echo -e "${YELLOW}This may take a minute depending on your internet speed...${NC}"
 
-# Download the latest release
-DOWNLOAD_URL="https://github.com/18drider360/siena_snowy_adventure/releases/latest/download/SienaSnowyAdventure-Mac-v1.2.7.zip"
+# Download the latest release (v1.2.7)
+DOWNLOAD_URL="https://github.com/18drider360/siena_snowy_adventure/releases/download/v1.2.7/SienaSnowyAdventure-Mac-v1.2.7.zip"
 
 if ! curl -L -# -o "$ZIP_FILE" "$DOWNLOAD_URL" 2>&1; then
     echo -e "${RED}Error: Failed to download the game.${NC}"
