@@ -23,7 +23,7 @@ _current_music_track = None
 
 def scale_mouse_pos(mouse_pos):
     """Convert mouse position from display coordinates to internal render coordinates"""
-    return (int(mouse_pos[0] / S.DISPLAY_SCALE), int(mouse_pos[1] / S.DISPLAY_SCALE))
+    return (int(mouse_pos[0] / S.current_display_scale), int(mouse_pos[1] / S.current_display_scale))
 
 
 def draw_story_scene(screen, scene_data):
@@ -257,10 +257,10 @@ def show_story_cutscene(story_key, disable_audio=False):
     if not pygame.get_init():
         pygame.init()
 
-    # Create scaled display window
-    display_width = int(S.WINDOW_WIDTH * S.DISPLAY_SCALE)
-    display_height = int(S.WINDOW_HEIGHT * S.DISPLAY_SCALE)
-    display_screen = pygame.display.set_mode((display_width, display_height))
+    # Create scaled display window (resizable)
+    display_width = int(S.WINDOW_WIDTH * S.current_display_scale)
+    display_height = int(S.WINDOW_HEIGHT * S.current_display_scale)
+    display_screen = pygame.display.set_mode((display_width, display_height), pygame.RESIZABLE)
     pygame.display.set_caption(S.TITLE)
 
     # Create internal render surface (800x600)
@@ -293,7 +293,17 @@ def show_story_cutscene(story_key, disable_audio=False):
                     pygame.quit()
                     sys.exit()
 
-                if event.type == pygame.KEYDOWN:
+                # Handle window resize events
+                elif event.type == pygame.VIDEORESIZE:
+                    # Enforce 5:3 aspect ratio
+                    corrected_width, corrected_height = S.enforce_aspect_ratio(event.w, event.h)
+                    S.current_display_scale = corrected_width / S.WINDOW_WIDTH
+                    display_width = corrected_width
+                    display_height = corrected_height
+                    display_screen = pygame.display.set_mode((display_width, display_height), pygame.RESIZABLE)
+                    continue  # Don't pass VIDEORESIZE to screens - they'll use fresh scale on next mouse event
+
+                elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_RETURN:
                         running = False  # Move to next scene
 
@@ -318,10 +328,10 @@ def show_title_screen(progression, disable_audio=False):
     if not pygame.get_init():
         pygame.init()
 
-    # Create scaled display window
-    display_width = int(S.WINDOW_WIDTH * S.DISPLAY_SCALE)
-    display_height = int(S.WINDOW_HEIGHT * S.DISPLAY_SCALE)
-    display_screen = pygame.display.set_mode((display_width, display_height))
+    # Create scaled display window (resizable)
+    display_width = int(S.WINDOW_WIDTH * S.current_display_scale)
+    display_height = int(S.WINDOW_HEIGHT * S.current_display_scale)
+    display_screen = pygame.display.set_mode((display_width, display_height), pygame.RESIZABLE)
     pygame.display.set_caption(S.TITLE)
 
     # Create internal render surface (800x600) - this is what we draw to
@@ -356,6 +366,16 @@ def show_title_screen(progression, disable_audio=False):
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
+
+            # Handle window resize events
+            elif event.type == pygame.VIDEORESIZE:
+                # Enforce 5:3 aspect ratio
+                corrected_width, corrected_height = S.enforce_aspect_ratio(event.w, event.h)
+                S.current_display_scale = corrected_width / S.WINDOW_WIDTH
+                display_width = corrected_width
+                display_height = corrected_height
+                display_screen = pygame.display.set_mode((display_width, display_height), pygame.RESIZABLE)
+                continue  # Don't pass VIDEORESIZE to screens - they'll use fresh scale on next mouse event
 
             # Handle input based on current screen
             if current_screen == "TITLE":
@@ -396,6 +416,10 @@ def show_title_screen(progression, disable_audio=False):
             elif current_screen == "SCOREBOARD":
                 # Show scoreboard (it handles its own event loop)
                 show_scoreboard(display_screen)
+                # Sync display screen size after returning from scoreboard
+                display_width = int(S.WINDOW_WIDTH * S.current_display_scale)
+                display_height = int(S.WINDOW_HEIGHT * S.current_display_scale)
+                display_screen = pygame.display.set_mode((display_width, display_height), pygame.RESIZABLE)
                 current_screen = "TITLE"  # Return to title screen after
 
             elif current_screen == "GUIDE":
@@ -435,10 +459,10 @@ def show_educational_screens(next_level_num, disable_audio=False):
     if not pygame.get_init():
         pygame.init()
 
-    # Create scaled display window
-    display_width = int(S.WINDOW_WIDTH * S.DISPLAY_SCALE)
-    display_height = int(S.WINDOW_HEIGHT * S.DISPLAY_SCALE)
-    display_screen = pygame.display.set_mode((display_width, display_height))
+    # Create scaled display window (resizable)
+    display_width = int(S.WINDOW_WIDTH * S.current_display_scale)
+    display_height = int(S.WINDOW_HEIGHT * S.current_display_scale)
+    display_screen = pygame.display.set_mode((display_width, display_height), pygame.RESIZABLE)
     pygame.display.set_caption(S.TITLE)
 
     # Create internal render surface (800x600) - this is what we draw to
@@ -486,7 +510,17 @@ def show_educational_screens(next_level_num, disable_audio=False):
                     pygame.quit()
                     sys.exit()
 
-                if event.type == pygame.KEYDOWN:
+                # Handle window resize events
+                elif event.type == pygame.VIDEORESIZE:
+                    # Enforce 5:3 aspect ratio
+                    corrected_width, corrected_height = S.enforce_aspect_ratio(event.w, event.h)
+                    S.current_display_scale = corrected_width / S.WINDOW_WIDTH
+                    display_width = corrected_width
+                    display_height = corrected_height
+                    display_screen = pygame.display.set_mode((display_width, display_height), pygame.RESIZABLE)
+                    continue  # Don't pass VIDEORESIZE to screens - they'll use fresh scale on next mouse event
+
+                elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_RETURN:
                         running = False  # Move to next screen
 
@@ -523,10 +557,10 @@ def show_level_transition(next_level_num, disable_audio=False):
     if not pygame.get_init():
         pygame.init()
 
-    # Create scaled display window
-    display_width = int(S.WINDOW_WIDTH * S.DISPLAY_SCALE)
-    display_height = int(S.WINDOW_HEIGHT * S.DISPLAY_SCALE)
-    display_screen = pygame.display.set_mode((display_width, display_height))
+    # Create scaled display window (resizable)
+    display_width = int(S.WINDOW_WIDTH * S.current_display_scale)
+    display_height = int(S.WINDOW_HEIGHT * S.current_display_scale)
+    display_screen = pygame.display.set_mode((display_width, display_height), pygame.RESIZABLE)
     pygame.display.set_caption(S.TITLE)
 
     # Create internal render surface (800x600) - this is what we draw to
@@ -557,7 +591,17 @@ def show_level_transition(next_level_num, disable_audio=False):
                     pygame.quit()
                     sys.exit()
 
-                if event.type == pygame.KEYDOWN:
+                # Handle window resize events
+                elif event.type == pygame.VIDEORESIZE:
+                    # Enforce 5:3 aspect ratio
+                    corrected_width, corrected_height = S.enforce_aspect_ratio(event.w, event.h)
+                    S.current_display_scale = corrected_width / S.WINDOW_WIDTH
+                    display_width = corrected_width
+                    display_height = corrected_height
+                    display_screen = pygame.display.set_mode((display_width, display_height), pygame.RESIZABLE)
+                    continue  # Don't pass VIDEORESIZE to screens - they'll use fresh scale on next mouse event
+
+                elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_RETURN:
                         running = False
 

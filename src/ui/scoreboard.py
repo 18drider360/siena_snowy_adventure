@@ -72,17 +72,17 @@ class ScoreboardScreen:
 
         # Fonts
         try:
-            self.title_font = pygame.font.Font("assets/fonts/PressStart2P-Regular.ttf", 36)
-            self.level_font = pygame.font.Font("assets/fonts/PressStart2P-Regular.ttf", 20)  # Reduced from 24
-            self.header_font = pygame.font.Font("assets/fonts/PressStart2P-Regular.ttf", 14)  # Reduced from 16
-            self.score_font = pygame.font.Font("assets/fonts/PressStart2P-Regular.ttf", 12)  # Reduced from 14
-            self.hint_font = pygame.font.Font("assets/fonts/PressStart2P-Regular.ttf", 12)
+            self.title_font = pygame.font.Font("assets/fonts/PressStart2P-Regular.ttf", 32)  # Reduced from 36
+            self.level_font = pygame.font.Font("assets/fonts/PressStart2P-Regular.ttf", 18)  # Reduced from 20
+            self.header_font = pygame.font.Font("assets/fonts/PressStart2P-Regular.ttf", 12)  # Reduced from 14
+            self.score_font = pygame.font.Font("assets/fonts/PressStart2P-Regular.ttf", 11)  # Reduced from 12
+            self.hint_font = pygame.font.Font("assets/fonts/PressStart2P-Regular.ttf", 9)  # Reduced from 11 for instructions
         except:
-            self.title_font = pygame.font.Font(None, 54)
-            self.level_font = pygame.font.Font(None, 32)
-            self.header_font = pygame.font.Font(None, 22)
-            self.score_font = pygame.font.Font(None, 18)
-            self.hint_font = pygame.font.Font(None, 18)
+            self.title_font = pygame.font.Font(None, 48)
+            self.level_font = pygame.font.Font(None, 28)
+            self.header_font = pygame.font.Font(None, 18)
+            self.score_font = pygame.font.Font(None, 16)
+            self.hint_font = pygame.font.Font(None, 14)
 
         # Create snowflakes
         screen_width = screen.get_width()
@@ -123,10 +123,10 @@ class ScoreboardScreen:
     def get_arrow_at_pos(self, pos):
         """Get which arrow (if any) is at the given mouse position"""
         screen_width = self.screen.get_width()
-        level_box_width = 600
-        level_box_height = 50
+        level_box_width = 500  # Updated to match actual drawn size
+        level_box_height = 45  # Updated to match actual drawn size
         level_box_x = (screen_width - level_box_width) // 2
-        level_box_y = 90
+        level_box_y = 80  # Updated to match actual drawn position
 
         # Create clickable regions for arrows (larger than visual arrows for easier clicking)
         arrow_size = 40
@@ -155,30 +155,38 @@ class ScoreboardScreen:
 
         return None
 
+    def _get_filter_y(self):
+        """Helper to calculate consistent filter_y position"""
+        # Position filter boxes near the bottom of the 600px render surface
+        # Leave room for the 40px tall boxes plus hint text below
+        return 480  # Moved up from 520 to provide more visual space
+
     def get_difficulty_arrow_at_pos(self, pos):
         """Get which difficulty arrow (if any) is at the given mouse position"""
-        screen_width = self.screen.get_width()
-        diff_box_width = 300
-        diff_box_height = 50
-        diff_box_x = screen_width - diff_box_width - 40
-        diff_box_y = 90
+        # Difficulty box is now below scores table, horizontally arranged
+        filter_y = self._get_filter_y()
+
+        diff_box_width = 180
+        diff_box_height = 40
+        diff_box_x = 270
+        diff_box_y = filter_y
 
         arrow_size = 30
 
-        # Up arrow region
+        # Up arrow region (left of box for horizontal layout)
         up_arrow_rect = pygame.Rect(
-            diff_box_x + (diff_box_width - arrow_size) // 2,
-            diff_box_y - arrow_size - 5,
+            diff_box_x - arrow_size - 5,
+            diff_box_y + (diff_box_height - arrow_size) // 2,
             arrow_size,
             arrow_size
         )
         if up_arrow_rect.collidepoint(pos):
             return "UP"
 
-        # Down arrow region
+        # Down arrow region (right of box for horizontal layout)
         down_arrow_rect = pygame.Rect(
-            diff_box_x + (diff_box_width - arrow_size) // 2,
-            diff_box_y + diff_box_height + 5,
+            diff_box_x + diff_box_width + 5,
+            diff_box_y + (diff_box_height - arrow_size) // 2,
             arrow_size,
             arrow_size
         )
@@ -194,16 +202,13 @@ class ScoreboardScreen:
 
     def get_checkpoints_box_at_pos(self, pos):
         """Check if the given position is inside the checkpoints box"""
-        screen_width = self.screen.get_width()
-        diff_box_width = 300
-        diff_box_height = 50
-        diff_box_x = screen_width - diff_box_width - 40
-        diff_box_y = 90
+        # Checkpoints box is now below scores table, horizontally arranged
+        filter_y = self._get_filter_y()
 
-        chkpt_box_width = 220
-        chkpt_box_height = 60
-        chkpt_box_x = screen_width - chkpt_box_width - 40
-        chkpt_box_y = diff_box_y + diff_box_height + 50
+        chkpt_box_width = 200
+        chkpt_box_height = 40
+        chkpt_box_x = 500
+        chkpt_box_y = filter_y
 
         chkpt_box_rect = pygame.Rect(chkpt_box_x, chkpt_box_y, chkpt_box_width, chkpt_box_height)
         if chkpt_box_rect.collidepoint(pos):
@@ -212,10 +217,13 @@ class ScoreboardScreen:
 
     def get_view_mode_box_at_pos(self, pos):
         """Check if the given position is inside the view mode toggle box"""
-        box_width = 180
-        box_height = 50
-        box_x = 40
-        box_y = 90
+        # View mode box is now below scores table, horizontally arranged
+        filter_y = self._get_filter_y()
+
+        box_width = 140
+        box_height = 40
+        box_x = 80
+        box_y = filter_y
         box_rect = pygame.Rect(box_x, box_y, box_width, box_height)
         return box_rect.collidepoint(pos)
 
@@ -262,6 +270,8 @@ class ScoreboardScreen:
 
     def handle_event(self, event):
         """Handle keyboard and mouse input"""
+        from src.utils import settings as S
+
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE or event.key == pygame.K_RETURN:
                 self.play_select_sound(use_click=True)  # Click sound for exiting
@@ -310,7 +320,8 @@ class ScoreboardScreen:
         elif event.type == pygame.MOUSEWHEEL:
             # Handle trackpad/mouse wheel scrolling (Mac/modern mice)
             mouse_pos = pygame.mouse.get_pos()
-            is_hovering = self.is_hovering_scoreboard(mouse_pos)
+            scaled_pos = (int(mouse_pos[0] / S.current_display_scale), int(mouse_pos[1] / S.current_display_scale))
+            is_hovering = self.is_hovering_scoreboard(scaled_pos)
             if is_hovering:
                 # event.y > 0 is scroll up, event.y < 0 is scroll down
                 if event.y > 0:  # Scroll up
@@ -320,24 +331,25 @@ class ScoreboardScreen:
                 return False  # Don't exit to main menu
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_pos = pygame.mouse.get_pos()
+            scaled_pos = (int(mouse_pos[0] / S.current_display_scale), int(mouse_pos[1] / S.current_display_scale))
 
             # Handle old-style mouse wheel scrolling (Linux/older mice)
             if event.button == 4:  # Scroll up
-                if self.is_hovering_scoreboard(mouse_pos):
+                if self.is_hovering_scoreboard(scaled_pos):
                     self.scroll_offset = max(0, self.scroll_offset - 1)
                     return False  # Don't exit to main menu
             elif event.button == 5:  # Scroll down
-                if self.is_hovering_scoreboard(mouse_pos):
+                if self.is_hovering_scoreboard(scaled_pos):
                     self.scroll_offset += 1
                     return False  # Don't exit to main menu
 
             # Check if clicking on view mode toggle box
-            if self.get_view_mode_box_at_pos(mouse_pos):
+            if self.get_view_mode_box_at_pos(scaled_pos):
                 if self.is_online_available:
                     self.toggle_view_mode()
                     self.play_select_sound(use_click=True)
             else:
-                arrow = self.get_arrow_at_pos(mouse_pos)
+                arrow = self.get_arrow_at_pos(scaled_pos)
                 if arrow == "LEFT":
                     self.current_level = max(1, self.current_level - 1)
                     self.scroll_offset = 0  # Reset scroll when changing levels
@@ -352,7 +364,7 @@ class ScoreboardScreen:
                     self.play_select_sound(volume=0.08)  # Hover sound for arrow navigation
                 else:
                     # Check if clicking on difficulty filter
-                    diff_arrow = self.get_difficulty_arrow_at_pos(mouse_pos)
+                    diff_arrow = self.get_difficulty_arrow_at_pos(scaled_pos)
                     if diff_arrow == "UP":
                         self.current_difficulty = (self.current_difficulty - 1) % len(self.difficulties)
                         self.scroll_offset = 0  # Reset scroll when changing difficulty
@@ -374,7 +386,7 @@ class ScoreboardScreen:
                         self.play_select_sound(volume=0.08)  # Hover sound for navigation
                     else:
                         # Check if clicking on checkpoints filter box
-                        if self.get_checkpoints_box_at_pos(mouse_pos):
+                        if self.get_checkpoints_box_at_pos(scaled_pos):
                             # Cycle through checkpoint filters
                             self.current_checkpoints = (self.current_checkpoints + 1) % len(self.checkpoints_filter)
                             self.scroll_offset = 0  # Reset scroll when changing checkpoints
@@ -383,7 +395,7 @@ class ScoreboardScreen:
                             self.play_select_sound(volume=0.08)  # Hover sound for navigation
                         else:
                             # Click anywhere else to go back (but not if scrolling over scoreboard)
-                            if not self.is_hovering_scoreboard(mouse_pos):
+                            if not self.is_hovering_scoreboard(scaled_pos):
                                 self.play_select_sound(use_click=True)  # Click sound for exit
                                 return True
         return False
@@ -458,51 +470,50 @@ class ScoreboardScreen:
 
     def is_hovering_view_mode_box(self, pos):
         """Check if mouse is hovering over the view mode toggle box"""
-        box_width = 180
-        box_height = 50
-        box_x = 40
-        box_y = 90
+        # View mode box is now below scores table, horizontally arranged
+        filter_y = self._get_filter_y()
+
+        box_width = 140
+        box_height = 40
+        box_x = 80
+        box_y = filter_y
         box_rect = pygame.Rect(box_x, box_y, box_width, box_height)
         return box_rect.collidepoint(pos)
 
     def is_hovering_difficulty_box(self, pos):
         """Check if mouse is hovering over the difficulty box"""
-        screen_width = self.screen.get_width()
-        diff_box_width = 300
-        diff_box_height = 50
-        diff_box_x = screen_width - diff_box_width - 40
-        diff_box_y = 90
+        # Difficulty box is now below scores table, horizontally arranged
+        filter_y = self._get_filter_y()
+
+        diff_box_width = 180
+        diff_box_height = 40
+        diff_box_x = 270
+        diff_box_y = filter_y
         diff_box_rect = pygame.Rect(diff_box_x, diff_box_y, diff_box_width, diff_box_height)
         return diff_box_rect.collidepoint(pos)
 
     def is_hovering_checkpoints_box(self, pos):
         """Check if mouse is hovering over the checkpoints box"""
-        screen_width = self.screen.get_width()
-        diff_box_width = 300
-        diff_box_height = 50
-        diff_box_x = screen_width - diff_box_width - 40
-        diff_box_y = 90
+        # Checkpoints box is now below scores table, horizontally arranged
+        filter_y = self._get_filter_y()
 
-        chkpt_box_width = 220
-        chkpt_box_height = 60
-        chkpt_box_x = screen_width - chkpt_box_width - 40
-        chkpt_box_y = diff_box_y + diff_box_height + 50
+        chkpt_box_width = 200
+        chkpt_box_height = 40
+        chkpt_box_x = 500
+        chkpt_box_y = filter_y
         chkpt_box_rect = pygame.Rect(chkpt_box_x, chkpt_box_y, chkpt_box_width, chkpt_box_height)
         return chkpt_box_rect.collidepoint(pos)
 
     def is_hovering_scoreboard(self, pos):
-        """Check if mouse is hovering over the scoreboard area"""
-        # Mouse position is in display coordinates, need to convert to render coordinates
-        from src.utils import settings as S
-        scaled_x = int(pos[0] / S.DISPLAY_SCALE) if hasattr(S, 'DISPLAY_SCALE') else pos[0]
-        scaled_y = int(pos[1] / S.DISPLAY_SCALE) if hasattr(S, 'DISPLAY_SCALE') else pos[1]
-        scaled_pos = (scaled_x, scaled_y)
+        """Check if mouse is hovering over the scoreboard area (pos should already be scaled)"""
+        # Position is already in render coordinates (scaled by caller)
+        scaled_pos = pos
 
         screen_width = self.screen.get_width()
-        scores_box_width = 650
-        scores_box_height = 380
+        scores_box_width = 900  # Updated to match new layout
+        scores_box_height = 280
         scores_box_x = (screen_width - scores_box_width) // 2
-        scores_box_y = 160
+        scores_box_y = 140
         scores_box_rect = pygame.Rect(scores_box_x, scores_box_y, scores_box_width, scores_box_height)
         return scores_box_rect.collidepoint(scaled_pos)
 
@@ -540,14 +551,17 @@ class ScoreboardScreen:
 
     def draw(self):
         """Draw the scoreboard screen with winter theme"""
+        from src.utils import settings as S
+
         screen_width = self.screen.get_width()
         screen_height = self.screen.get_height()
 
-        # Check if hovering over difficulty box or checkpoints box
+        # Check if hovering over difficulty box or checkpoints box (scale mouse position)
         mouse_pos = pygame.mouse.get_pos()
-        is_hovering = self.is_hovering_difficulty_box(mouse_pos)
-        is_hovering_checkpoints = self.is_hovering_checkpoints_box(mouse_pos)
-        is_hovering_view_mode = self.is_hovering_view_mode_box(mouse_pos)
+        scaled_pos = (int(mouse_pos[0] / S.current_display_scale), int(mouse_pos[1] / S.current_display_scale))
+        is_hovering = self.is_hovering_difficulty_box(scaled_pos)
+        is_hovering_checkpoints = self.is_hovering_checkpoints_box(scaled_pos)
+        is_hovering_view_mode = self.is_hovering_view_mode_box(scaled_pos)
 
         # Update and draw snowflakes
         for snowflake in self.snowflakes:
@@ -574,11 +588,11 @@ class ScoreboardScreen:
         title_rect = title_surface.get_rect(center=(screen_width // 2, 40))
         self.screen.blit(title_surface, title_rect)
 
-        # Draw level selector in frosted box
-        level_box_width = 600
-        level_box_height = 50
+        # Draw level selector in frosted box - much narrower for breathing room
+        level_box_width = 500
+        level_box_height = 45
         level_box_x = (screen_width - level_box_width) // 2
-        level_box_y = 90
+        level_box_y = 80
 
         self.draw_frosted_box(level_box_x, level_box_y, level_box_width, level_box_height, 160)
 
@@ -601,122 +615,7 @@ class ScoreboardScreen:
             right_rect = right_arrow.get_rect(midleft=(level_box_x + level_box_width - 30, level_box_y + level_box_height // 2))
             self.screen.blit(right_arrow, right_rect)
 
-        # Draw view mode toggle box (top left)
-        view_box_width = 180
-        view_box_height = 50
-        view_box_x = 40
-        view_box_y = 90
-
-        # Determine if clickable (only if online is available)
-        view_box_alpha = 200 if (is_hovering_view_mode and self.is_online_available) else 160
-        if not self.is_online_available:
-            view_box_alpha = 100  # Dimmed if offline
-
-        self.draw_frosted_box(view_box_x, view_box_y, view_box_width, view_box_height, view_box_alpha)
-
-        # View mode label
-        mode_text = "LOCAL" if self.view_mode == "local" else "ONLINE"
-        mode_color = (10, 30, 70) if self.is_online_available else (100, 100, 100)
-        mode_surface = self.level_font.render(mode_text, True, mode_color)
-        mode_rect = mode_surface.get_rect(center=(view_box_x + view_box_width // 2, view_box_y + view_box_height // 2))
-        self.screen.blit(mode_surface, mode_rect)
-
-        # Connection status indicator (small text below)
-        status_y = view_box_y + view_box_height + 8
-        if self.is_online_available:
-            status_text = "Online ✓"
-            status_color = (50, 150, 50)
-        else:
-            status_text = "Offline"
-            status_color = (150, 50, 50)
-        status_surface = self.score_font.render(status_text, True, status_color)
-        status_rect = status_surface.get_rect(center=(view_box_x + view_box_width // 2, status_y))
-        self.screen.blit(status_surface, status_rect)
-
-        # Add click hint when hovering and online is available
-        if is_hovering_view_mode and self.is_online_available:
-            hint_text = self.score_font.render("(click to toggle)", True, (80, 120, 160))
-            hint_rect = hint_text.get_rect(center=(view_box_x + view_box_width // 2, status_y + 20))
-            self.screen.blit(hint_text, hint_rect)
-
-        # Draw difficulty filter box (top right)
-        diff_box_width = 300
-        diff_box_height = 50
-        diff_box_x = screen_width - diff_box_width - 40
-        diff_box_y = 90
-
-        # Use brighter alpha if hovering to indicate clickability
-        box_alpha = 200 if is_hovering else 160
-        self.draw_frosted_box(diff_box_x, diff_box_y, diff_box_width, diff_box_height, box_alpha)
-
-        # Difficulty filter text
-        label_color = (10, 30, 70) if is_hovering else (20, 40, 80)
-        diff_label = self.score_font.render("DIFFICULTY:", True, label_color)
-        diff_label_rect = diff_label.get_rect(center=(diff_box_x + diff_box_width // 2, diff_box_y + 18))
-        self.screen.blit(diff_label, diff_label_rect)
-
-        value_color = (10, 30, 70) if is_hovering else (20, 40, 80)
-        current_diff_text = self.difficulties[self.current_difficulty]
-        diff_value = self.level_font.render(current_diff_text, True, value_color)
-        diff_value_rect = diff_value.get_rect(center=(diff_box_x + diff_box_width // 2, diff_box_y + 35))
-        self.screen.blit(diff_value, diff_value_rect)
-
-        # Add click hint when hovering
-        if is_hovering:
-            hint_text = self.score_font.render("(click to cycle)", True, (80, 120, 160))
-            hint_rect = hint_text.get_rect(center=(diff_box_x + diff_box_width // 2, diff_box_y + diff_box_height + 35))
-            self.screen.blit(hint_text, hint_rect)
-
-        # Up/Down arrows for difficulty
-        arrow_color = (20, 40, 80)
-        arrow_size = 15
-        center_x = diff_box_x + diff_box_width // 2
-
-        # Up arrow
-        up_arrow_y = diff_box_y - arrow_size - 10
-        up_arrow_points = [
-            (center_x, up_arrow_y),
-            (center_x - arrow_size, up_arrow_y + arrow_size),
-            (center_x + arrow_size, up_arrow_y + arrow_size)
-        ]
-        pygame.draw.polygon(self.screen, arrow_color, up_arrow_points)
-
-        # Down arrow
-        down_arrow_y = diff_box_y + diff_box_height + 10
-        down_arrow_points = [
-            (center_x, down_arrow_y + arrow_size),
-            (center_x - arrow_size, down_arrow_y),
-            (center_x + arrow_size, down_arrow_y)
-        ]
-        pygame.draw.polygon(self.screen, arrow_color, down_arrow_points)
-
-        # Draw checkpoints filter box (below difficulty)
-        chkpt_box_width = 220
-        chkpt_box_height = 60
-        chkpt_box_x = screen_width - chkpt_box_width - 40
-        chkpt_box_y = diff_box_y + diff_box_height + 50  # Below difficulty box
-
-        # Use brighter alpha if hovering to indicate clickability
-        chkpt_box_alpha = 200 if is_hovering_checkpoints else 160
-        self.draw_frosted_box(chkpt_box_x, chkpt_box_y, chkpt_box_width, chkpt_box_height, chkpt_box_alpha)
-
-        # Checkpoints filter text
-        chkpt_label_color = (10, 30, 70) if is_hovering_checkpoints else (20, 40, 80)
-        chkpt_label = self.score_font.render("CHECKPOINTS:", True, chkpt_label_color)
-        chkpt_label_rect = chkpt_label.get_rect(center=(chkpt_box_x + chkpt_box_width // 2, chkpt_box_y + 18))
-        self.screen.blit(chkpt_label, chkpt_label_rect)
-
-        chkpt_value_color = (10, 30, 70) if is_hovering_checkpoints else (20, 40, 80)
-        current_chkpt_text = self.checkpoints_filter[self.current_checkpoints]
-        chkpt_value = self.level_font.render(current_chkpt_text, True, chkpt_value_color)
-        chkpt_value_rect = chkpt_value.get_rect(center=(chkpt_box_x + chkpt_box_width // 2, chkpt_box_y + 38))
-        self.screen.blit(chkpt_value, chkpt_value_rect)
-
-        # Add click hint when hovering
-        if is_hovering_checkpoints:
-            hint_text = self.score_font.render("(click to cycle)", True, (80, 120, 160))
-            hint_rect = hint_text.get_rect(center=(chkpt_box_x + chkpt_box_width // 2, chkpt_box_y + chkpt_box_height + 35))
-            self.screen.blit(hint_text, hint_rect)
+        # NOTE: Filter boxes moved below scores table for better spacing
 
         # Get leaderboard based on view mode
         if self.view_mode == "online":
@@ -736,23 +635,23 @@ class ScoreboardScreen:
                 checkpoints_enabled = (self.current_checkpoints == 2)  # 1="Off", 2="On"
                 leaderboard = [score for score in leaderboard if score.get('checkpoints', False) == checkpoints_enabled]
 
-        # Draw scores in frosted box (widened for checkpoints column)
-        scores_box_width = 780
-        scores_box_height = 380
+        # Draw scores in frosted box - wider and shorter to fit filters below
+        scores_box_width = 900
+        scores_box_height = 280  # Reduced from 340 to make room for filters
         scores_box_x = (screen_width - scores_box_width) // 2
-        scores_box_y = 160
+        scores_box_y = 140
 
         self.draw_frosted_box(scores_box_x, scores_box_y, scores_box_width, scores_box_height, 170)
 
-        # Column headers (adjusted for wider username column)
+        # Column headers (adjusted for 700px width)
         header_y = scores_box_y + 20
         headers = [
-            ("RANK", 30),
-            ("NAME", 100),
-            ("TIME", 340),
-            ("COINS", 470),
-            ("DIFF", 580),
-            ("CHKPT", 690)
+            ("RANK", 20),
+            ("NAME", 80),
+            ("TIME", 300),
+            ("COINS", 410),
+            ("DIFF", 510),
+            ("CHKPT", 610)
         ]
 
         for text, x_offset in headers:
@@ -765,9 +664,9 @@ class ScoreboardScreen:
                         (scores_box_x + scores_box_width - 20, header_y + 30), 2)
 
         # Draw scores or empty message
-        start_y = header_y + 50
-        row_height = 32
-        max_visible_rows = 10
+        start_y = header_y + 45
+        row_height = 26  # Reduced from 32 to fit more in smaller space
+        max_visible_rows = 8  # Reduced from 10 to fit in shorter box
 
         # Show loading spinner if loading online scores
         if self.loading_online:
@@ -804,43 +703,84 @@ class ScoreboardScreen:
                 else:
                     rank_color = (20, 40, 80)
 
-                # Draw rank (using actual rank, not display index)
+                # Draw rank (using actual rank, not display index) - adjusted positions
                 rank_text = self.score_font.render(f"#{actual_rank + 1}", True, rank_color)
-                self.screen.blit(rank_text, (scores_box_x + 30, y))
+                self.screen.blit(rank_text, (scores_box_x + 20, y))
 
                 # Draw username (up to 20 characters)
                 username_text = self.score_font.render(score['username'][:20], True, (20, 40, 80))
-                self.screen.blit(username_text, (scores_box_x + 100, y))
+                self.screen.blit(username_text, (scores_box_x + 80, y))
 
-                # Draw time (moved right to accommodate longer usernames)
+                # Draw time
                 time_str = self.format_time(score['time'])
                 time_text = self.score_font.render(time_str, True, (20, 40, 80))
-                self.screen.blit(time_text, (scores_box_x + 340, y))
+                self.screen.blit(time_text, (scores_box_x + 300, y))
 
-                # Draw coins (moved right to match)
+                # Draw coins
                 coins_text = self.score_font.render(str(score['coins']), True, (20, 40, 80))
-                self.screen.blit(coins_text, (scores_box_x + 470, y))
+                self.screen.blit(coins_text, (scores_box_x + 410, y))
 
                 # Draw difficulty (default to "Medium" for old scores)
                 difficulty = score.get('difficulty', 'Medium')
                 # Shorten difficulty names for display
                 diff_short = difficulty[0]  # E, M, or H
                 diff_text = self.score_font.render(diff_short, True, (20, 40, 80))
-                self.screen.blit(diff_text, (scores_box_x + 580, y))
+                self.screen.blit(diff_text, (scores_box_x + 510, y))
 
                 # Draw checkpoints (default to False for old scores)
                 checkpoints = score.get('checkpoints', False)
                 checkpoint_text = "On" if checkpoints else "Off"
                 chkpt_text = self.score_font.render(checkpoint_text, True, (20, 40, 80))
-                self.screen.blit(chkpt_text, (scores_box_x + 690, y))
+                self.screen.blit(chkpt_text, (scores_box_x + 610, y))
 
             # Draw scroll indicator below the scoreboard box if there are more scores
             if len(leaderboard) > max_visible_rows:
-                indicator_y = scores_box_y + scores_box_height + 25  # 25 pixels below the box
+                indicator_y = scores_box_y + scores_box_height + 30  # Position between scores and filters
                 indicator_text = f"Showing {self.scroll_offset + 1}-{min(self.scroll_offset + max_visible_rows, len(leaderboard))} of {len(leaderboard)}"
-                indicator_surface = self.score_font.render(indicator_text, True, (80, 120, 160))
+                indicator_surface = self.hint_font.render(indicator_text, True, (80, 120, 160))
                 indicator_rect = indicator_surface.get_rect(center=(screen_width // 2, indicator_y))
                 self.screen.blit(indicator_surface, indicator_rect)
+
+        # Draw filter boxes below scores table - horizontally arranged
+        filter_y = self._get_filter_y()
+
+        # View mode box (left)
+        view_box_width = 140
+        view_box_height = 40
+        view_box_x = 80
+        view_box_alpha = 200 if (is_hovering_view_mode and self.is_online_available) else 160
+        if not self.is_online_available:
+            view_box_alpha = 100
+        self.draw_frosted_box(view_box_x, filter_y, view_box_width, view_box_height, view_box_alpha)
+        mode_text = "LOCAL" if self.view_mode == "local" else "ONLINE"
+        mode_color = (10, 30, 70) if self.is_online_available else (100, 100, 100)
+        mode_surface = self.score_font.render(mode_text, True, mode_color)
+        mode_rect = mode_surface.get_rect(center=(view_box_x + view_box_width // 2, filter_y + view_box_height // 2))
+        self.screen.blit(mode_surface, mode_rect)
+
+        # Difficulty box (center-left)
+        diff_box_width = 180
+        diff_box_height = 40
+        diff_box_x = 270
+        box_alpha = 200 if is_hovering else 160
+        self.draw_frosted_box(diff_box_x, filter_y, diff_box_width, diff_box_height, box_alpha)
+        label_color = (10, 30, 70) if is_hovering else (20, 40, 80)
+        diff_text = f"DIFF: {self.difficulties[self.current_difficulty]}"
+        diff_surface = self.score_font.render(diff_text, True, label_color)
+        diff_rect = diff_surface.get_rect(center=(diff_box_x + diff_box_width // 2, filter_y + view_box_height // 2))
+        self.screen.blit(diff_surface, diff_rect)
+
+        # Checkpoints box (center-right)
+        chkpt_box_width = 200
+        chkpt_box_height = 40
+        chkpt_box_x = 500
+        chkpt_box_alpha = 200 if is_hovering_checkpoints else 160
+        self.draw_frosted_box(chkpt_box_x, filter_y, chkpt_box_width, chkpt_box_height, chkpt_box_alpha)
+        chkpt_label_color = (10, 30, 70) if is_hovering_checkpoints else (20, 40, 80)
+        chkpt_text_str = f"CHKPT: {self.checkpoints_filter[self.current_checkpoints]}"
+        chkpt_surface = self.score_font.render(chkpt_text_str, True, chkpt_label_color)
+        chkpt_rect = chkpt_surface.get_rect(center=(chkpt_box_x + chkpt_box_width // 2, filter_y + chkpt_box_height // 2))
+        self.screen.blit(chkpt_surface, chkpt_rect)
 
         # Draw hints at bottom
         hint_y = screen_height - 40
@@ -859,19 +799,40 @@ class ScoreboardScreen:
             self.screen.blit(hint_surface, hint_rect)
 
 
-def show_scoreboard(screen):
+def show_scoreboard(display_screen):
     """Show the scoreboard screen"""
-    scoreboard = ScoreboardScreen(screen)
+    from src.utils import settings as S
+
+    # Create internal render surface (1000x600) - this is what we draw to
+    render_surface = pygame.Surface((S.WINDOW_WIDTH, S.WINDOW_HEIGHT))
+    scoreboard = ScoreboardScreen(render_surface)
     clock = pygame.time.Clock()
+
+    # Get current display dimensions
+    display_width = display_screen.get_width()
+    display_height = display_screen.get_height()
 
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return
 
+            # Handle window resize events
+            elif event.type == pygame.VIDEORESIZE:
+                # Enforce 5:3 aspect ratio
+                corrected_width, corrected_height = S.enforce_aspect_ratio(event.w, event.h)
+                S.current_display_scale = corrected_width / S.WINDOW_WIDTH
+                display_width = corrected_width
+                display_height = corrected_height
+                display_screen = pygame.display.set_mode((display_width, display_height), pygame.RESIZABLE)
+
             if scoreboard.handle_event(event):
                 return
 
         scoreboard.draw()
+
+        # Scale render surface to display screen
+        scaled_surface = pygame.transform.scale(render_surface, (display_width, display_height))
+        display_screen.blit(scaled_surface, (0, 0))
         pygame.display.flip()
         clock.tick(60)

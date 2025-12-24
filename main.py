@@ -68,10 +68,11 @@ def main(progression):
         except (pygame.error, AttributeError) as e:
             logger.debug(f"Could not disable audio mixer: {e}")
 
-    # Create scaled display window
-    display_width = int(S.WINDOW_WIDTH * S.DISPLAY_SCALE)
-    display_height = int(S.WINDOW_HEIGHT * S.DISPLAY_SCALE)
-    display_screen = pygame.display.set_mode((display_width, display_height))
+    # Create scaled display window with resizable flag
+    # Use current_display_scale to preserve window size from title screen
+    display_width = int(S.WINDOW_WIDTH * S.current_display_scale)
+    display_height = int(S.WINDOW_HEIGHT * S.current_display_scale)
+    display_screen = pygame.display.set_mode((display_width, display_height), pygame.RESIZABLE)
     pygame.display.set_caption(S.TITLE)
 
     # Create internal render surface (800x600) - this is what we draw to
@@ -180,6 +181,18 @@ def main(progression):
         command = input_handler.handle_events(
             game_state, player, pause_menu, death_menu, audio_manager
         )
+
+        # --- WINDOW RESIZE HANDLING ---
+        if input_handler.window_resized and input_handler.new_window_size:
+            new_width, new_height = input_handler.new_window_size
+            # Enforce 5:3 aspect ratio (1000x600)
+            corrected_width, corrected_height = S.enforce_aspect_ratio(new_width, new_height)
+            S.current_display_scale = corrected_width / S.WINDOW_WIDTH
+            # Update display surface with corrected dimensions
+            display_width = corrected_width
+            display_height = corrected_height
+            display_screen = pygame.display.set_mode((display_width, display_height), pygame.RESIZABLE)
+            logger.debug(f"Window resized: scale={S.current_display_scale:.2f}, size={display_width}x{display_height}, ratio=5:3")
 
         if command == "RESTART":
             return "RESTART"
@@ -852,8 +865,8 @@ def main(progression):
 
             # Check mouse hover to update button selection
             mouse_pos = pygame.mouse.get_pos()
-            scaled_mouse_x = int(mouse_pos[0] / S.DISPLAY_SCALE)
-            scaled_mouse_y = int(mouse_pos[1] / S.DISPLAY_SCALE)
+            scaled_mouse_x = int(mouse_pos[0] / S.current_display_scale)
+            scaled_mouse_y = int(mouse_pos[1] / S.current_display_scale)
             scaled_mouse_pos = (scaled_mouse_x, scaled_mouse_y)
 
             if continue_rect.collidepoint(scaled_mouse_pos):
@@ -904,8 +917,8 @@ def main(progression):
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     # Mouse click - detect which button was clicked
                     mouse_pos = pygame.mouse.get_pos()
-                    scaled_mouse_x = int(mouse_pos[0] / S.DISPLAY_SCALE)
-                    scaled_mouse_y = int(mouse_pos[1] / S.DISPLAY_SCALE)
+                    scaled_mouse_x = int(mouse_pos[0] / S.current_display_scale)
+                    scaled_mouse_y = int(mouse_pos[1] / S.current_display_scale)
                     scaled_mouse_pos = (scaled_mouse_x, scaled_mouse_y)
 
                     if continue_rect.collidepoint(scaled_mouse_pos):
@@ -1283,11 +1296,14 @@ if __name__ == "__main__":
     # Initialize pygame first (needed for username input)
     pygame.init()
 
-    # Create display for username input
+    # Create display for username input (resizable)
     display_width = int(S.WINDOW_WIDTH * S.DISPLAY_SCALE)
     display_height = int(S.WINDOW_HEIGHT * S.DISPLAY_SCALE)
-    screen = pygame.display.set_mode((display_width, display_height))
+    screen = pygame.display.set_mode((display_width, display_height), pygame.RESIZABLE)
     pygame.display.set_caption(S.TITLE)
+
+    # Initialize current display scale
+    S.current_display_scale = S.DISPLAY_SCALE
 
     # Initialize progression system
     progression = GameProgression()

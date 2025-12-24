@@ -98,7 +98,7 @@ class PauseMenu:
         elif event.type == pygame.MOUSEMOTION:
             mouse_pos = pygame.mouse.get_pos()
             # Scale mouse position to internal coordinates
-            scaled_pos = (int(mouse_pos[0] / S.DISPLAY_SCALE), int(mouse_pos[1] / S.DISPLAY_SCALE))
+            scaled_pos = (int(mouse_pos[0] / S.current_display_scale), int(mouse_pos[1] / S.current_display_scale))
             clicked_option = self.get_option_at_pos(scaled_pos)
             if clicked_option is not None:
                 # Play sound when hovering over a new option
@@ -113,7 +113,7 @@ class PauseMenu:
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_pos = pygame.mouse.get_pos()
             # Scale mouse position to internal coordinates
-            scaled_pos = (int(mouse_pos[0] / S.DISPLAY_SCALE), int(mouse_pos[1] / S.DISPLAY_SCALE))
+            scaled_pos = (int(mouse_pos[0] / S.current_display_scale), int(mouse_pos[1] / S.current_display_scale))
             clicked_option = self.get_option_at_pos(scaled_pos)
             if clicked_option is not None:
                 self.selected_index = clicked_option
@@ -305,7 +305,7 @@ class DeathMenu:
         elif event.type == pygame.MOUSEMOTION:
             mouse_pos = pygame.mouse.get_pos()
             # Scale mouse position to internal coordinates
-            scaled_pos = (int(mouse_pos[0] / S.DISPLAY_SCALE), int(mouse_pos[1] / S.DISPLAY_SCALE))
+            scaled_pos = (int(mouse_pos[0] / S.current_display_scale), int(mouse_pos[1] / S.current_display_scale))
             clicked_option = self.get_option_at_pos(scaled_pos)
             if clicked_option is not None:
                 # Play sound when hovering over a new option
@@ -320,7 +320,7 @@ class DeathMenu:
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_pos = pygame.mouse.get_pos()
             # Scale mouse position to internal coordinates
-            scaled_pos = (int(mouse_pos[0] / S.DISPLAY_SCALE), int(mouse_pos[1] / S.DISPLAY_SCALE))
+            scaled_pos = (int(mouse_pos[0] / S.current_display_scale), int(mouse_pos[1] / S.current_display_scale))
             clicked_option = self.get_option_at_pos(scaled_pos)
             if clicked_option is not None:
                 self.selected_index = clicked_option

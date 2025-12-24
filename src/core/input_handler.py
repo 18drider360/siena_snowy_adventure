@@ -20,6 +20,8 @@ class InputHandler:
     def __init__(self):
         """Initialize the input handler"""
         self.quit_requested = False
+        self.window_resized = False
+        self.new_window_size = None
         logger.debug("InputHandler initialized")
 
     def handle_events(self, game_state, player, pause_menu, death_menu, audio_manager):
@@ -38,14 +40,23 @@ class InputHandler:
         """
         command = None
 
+        # Reset resize flag each frame
+        self.window_resized = False
+
         if not game_state.cutscene_active:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.quit_requested = True
                     return "QUIT"
 
+                # Handle window resize events
+                elif event.type == pygame.VIDEORESIZE:
+                    self.window_resized = True
+                    self.new_window_size = (event.w, event.h)
+                    logger.debug(f"Window resized to {event.w}x{event.h}")
+
                 # Handle keyboard events
-                if event.type == pygame.KEYDOWN:
+                elif event.type == pygame.KEYDOWN:
                     result = self._handle_keydown(
                         event, game_state, player, pause_menu, death_menu, audio_manager
                     )

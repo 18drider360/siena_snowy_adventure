@@ -145,6 +145,8 @@ class UsernameInput:
 
     def handle_event(self, event):
         """Handle keyboard and mouse input"""
+        from src.utils import settings as S
+
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_RETURN:
                 # If a button is selected, activate it
@@ -222,8 +224,9 @@ class UsernameInput:
                         self.selected_button = None  # Deselect button when typing
 
         elif event.type == pygame.MOUSEMOTION:
-            # Check button hover (no scaling needed - already in display coordinates)
+            # Scale mouse position to internal coordinates
             mouse_pos = pygame.mouse.get_pos()
+            scaled_pos = (int(mouse_pos[0] / S.current_display_scale), int(mouse_pos[1] / S.current_display_scale))
 
             self.button_hover = None
             for button in ["generate", "confirm"]:
@@ -232,24 +235,25 @@ class UsernameInput:
                     continue
 
                 rect = self.get_button_rect(button)
-                if rect and rect.collidepoint(mouse_pos):
+                if rect and rect.collidepoint(scaled_pos):
                     self.button_hover = button
                     break
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            # Handle button clicks (no scaling needed - already in display coordinates)
+            # Scale mouse position to internal coordinates
             mouse_pos = pygame.mouse.get_pos()
+            scaled_pos = (int(mouse_pos[0] / S.current_display_scale), int(mouse_pos[1] / S.current_display_scale))
 
             # Generate button
             generate_rect = self.get_button_rect("generate")
-            if generate_rect.collidepoint(mouse_pos):
+            if generate_rect.collidepoint(scaled_pos):
                 self.username = self.generate_random_username()
                 self.error_message = ""  # Clear any error
                 return False
 
             # Confirm button - only clickable if username has at least 1 character
             confirm_rect = self.get_button_rect("confirm")
-            if confirm_rect.collidepoint(mouse_pos):
+            if confirm_rect.collidepoint(scaled_pos):
                 if self.username.strip():
                     is_valid, error_msg = validate_username(self.username)
                     if is_valid:
@@ -589,7 +593,7 @@ class PlayerProfileScreen:
         elif event.type == pygame.MOUSEMOTION:
             mouse_pos = pygame.mouse.get_pos()
             # Scale mouse position to internal coordinates
-            scaled_pos = (int(mouse_pos[0] / S.DISPLAY_SCALE), int(mouse_pos[1] / S.DISPLAY_SCALE))
+            scaled_pos = (int(mouse_pos[0] / S.current_display_scale), int(mouse_pos[1] / S.current_display_scale))
 
             # Check button hovers
             self.button_hover = None
@@ -621,7 +625,7 @@ class PlayerProfileScreen:
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_pos = pygame.mouse.get_pos()
             # Scale mouse position to internal coordinates
-            scaled_pos = (int(mouse_pos[0] / S.DISPLAY_SCALE), int(mouse_pos[1] / S.DISPLAY_SCALE))
+            scaled_pos = (int(mouse_pos[0] / S.current_display_scale), int(mouse_pos[1] / S.current_display_scale))
 
             # Check difficulty buttons
             for difficulty in self.difficulties:
@@ -790,10 +794,16 @@ class PlayerProfileScreen:
         self.screen.blit(hint_surface, hint_rect)
 
 
-def show_username_input(screen):
+def show_username_input(display_screen):
     """Show username input screen and get username"""
-    username_input = UsernameInput(screen)
+    # Create internal render surface (1000x600) - this is what we draw to
+    render_surface = pygame.Surface((S.WINDOW_WIDTH, S.WINDOW_HEIGHT))
+    username_input = UsernameInput(render_surface)
     clock = pygame.time.Clock()
+
+    # Get current display dimensions
+    display_width = display_screen.get_width()
+    display_height = display_screen.get_height()
 
     # Enable key repeat for holding down keys (delay, interval in milliseconds)
     pygame.key.set_repeat(500, 50)  # 500ms delay, then 50ms between repeats
@@ -804,12 +814,26 @@ def show_username_input(screen):
                 if event.type == pygame.QUIT:
                     return None
 
+                # Handle window resize events
+                elif event.type == pygame.VIDEORESIZE:
+                    # Enforce 5:3 aspect ratio
+                    corrected_width, corrected_height = S.enforce_aspect_ratio(event.w, event.h)
+                    S.current_display_scale = corrected_width / S.WINDOW_WIDTH
+                    display_width = corrected_width
+                    display_height = corrected_height
+                    display_screen = pygame.display.set_mode((display_width, display_height), pygame.RESIZABLE)
+                    continue  # Don't pass VIDEORESIZE to username_input - it'll use fresh scale on next mouse event
+
                 if username_input.handle_event(event):
                     username = username_input.username.strip()
                     return username if username else "Player"
 
             username_input.update()
             username_input.draw()
+
+            # Scale render surface to display screen
+            scaled_surface = pygame.transform.scale(render_surface, (display_width, display_height))
+            display_screen.blit(scaled_surface, (0, 0))
             pygame.display.flip()
             clock.tick(60)
     finally:

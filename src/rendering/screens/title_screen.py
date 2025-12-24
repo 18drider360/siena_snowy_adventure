@@ -232,7 +232,7 @@ class TitleScreen:
         elif event.type == pygame.MOUSEMOTION:
             # Update selection based on mouse position (scaled to internal coordinates)
             mouse_pos = pygame.mouse.get_pos()
-            scaled_pos = (int(mouse_pos[0] / S.DISPLAY_SCALE), int(mouse_pos[1] / S.DISPLAY_SCALE))
+            scaled_pos = (int(mouse_pos[0] / S.current_display_scale), int(mouse_pos[1] / S.current_display_scale))
 
             # Check update button hover
             if self.update_available:
@@ -265,7 +265,7 @@ class TitleScreen:
         elif event.type == pygame.MOUSEBUTTONDOWN:
             # Click to select (scaled to internal coordinates)
             mouse_pos = pygame.mouse.get_pos()
-            scaled_pos = (int(mouse_pos[0] / S.DISPLAY_SCALE), int(mouse_pos[1] / S.DISPLAY_SCALE))
+            scaled_pos = (int(mouse_pos[0] / S.current_display_scale), int(mouse_pos[1] / S.current_display_scale))
 
             # Check update button click
             if self.update_available and self.update_state == "idle":
@@ -835,7 +835,7 @@ class LevelSelectScreen:
         elif event.type == pygame.MOUSEMOTION:
             # Update selection on hover (scaled to internal coordinates)
             mouse_pos = pygame.mouse.get_pos()
-            scaled_pos = (int(mouse_pos[0] / S.DISPLAY_SCALE), int(mouse_pos[1] / S.DISPLAY_SCALE))
+            scaled_pos = (int(mouse_pos[0] / S.current_display_scale), int(mouse_pos[1] / S.current_display_scale))
             level = self.get_level_at_pos(scaled_pos)
             if level is not None:
                 # Play sound when hovering over a new level
@@ -850,7 +850,7 @@ class LevelSelectScreen:
         elif event.type == pygame.MOUSEBUTTONDOWN:
             # Click to select level (scaled to internal coordinates)
             mouse_pos = pygame.mouse.get_pos()
-            scaled_pos = (int(mouse_pos[0] / S.DISPLAY_SCALE), int(mouse_pos[1] / S.DISPLAY_SCALE))
+            scaled_pos = (int(mouse_pos[0] / S.current_display_scale), int(mouse_pos[1] / S.current_display_scale))
             level = self.get_level_at_pos(scaled_pos)
             if level is not None:
                 self.selected_level = level
@@ -1050,8 +1050,8 @@ class GuideScreen:
         # Mouse hover over tabs and back button
         elif event.type == pygame.MOUSEMOTION:
             mouse_pos = pygame.mouse.get_pos()
-            scaled_pos = (int(mouse_pos[0] / S.DISPLAY_SCALE),
-                          int(mouse_pos[1] / S.DISPLAY_SCALE))
+            scaled_pos = (int(mouse_pos[0] / S.current_display_scale),
+                          int(mouse_pos[1] / S.current_display_scale))
 
             # Track tab hover and play sound on change
             self.tab_hover = self.get_tab_at_pos(scaled_pos)
@@ -1068,8 +1068,8 @@ class GuideScreen:
         # Mouse click on tabs or back button
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_pos = pygame.mouse.get_pos()
-            scaled_pos = (int(mouse_pos[0] / S.DISPLAY_SCALE),
-                          int(mouse_pos[1] / S.DISPLAY_SCALE))
+            scaled_pos = (int(mouse_pos[0] / S.current_display_scale),
+                          int(mouse_pos[1] / S.current_display_scale))
 
             # Check back button first
             if self.is_back_button_hovered(scaled_pos):
